@@ -1,39 +1,99 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router';
-import { fetchApiCall } from '@/utils/api'
+import { useFiltersStore } from '@/stores/filters'
+
+
+const filtersStore = useFiltersStore()
 
 const route = useRoute();
-const instrumentData = ref({})
 
-async function loadInstrument(instrumentId) {
-  const url = import.meta.env.VITE_HEROIC_API_URL + 'instruments/' + instrumentId + '/';
-  await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
-    instrumentData.value = data;
-  }})
-}
-
-const formattedInstrumentData = computed(() => {
-  return JSON.stringify(instrumentData.value, null, 4);
+const instrumentData = computed(() => {
+  if (filtersStore.telescopes) {
+    return filtersStore.getInstrument(route.params.id);
+  }
+  return {};
 })
 
-onMounted(async () => {
-  loadInstrument(route.params.id);
+const telescopeData = computed(() => {
+  if (filtersStore.telescopes) {
+    return filtersStore.getTelescopeForInstrument(route.params.id) || {};
+  }
+  return {};
 })
 
 </script>
 
 <template>
   <v-container fluid>
-    <h1>Instrument {{ route.params.id }} Data:</h1>
-    <v-textarea
-      :model-value="formattedInstrumentData"
-      auto-grow
-      readonly
-      >
-    </v-textarea>
+    <h4 class="label-text ml-2" style="margin-bottom:-6px;" v-if="telescopeData">
+      {{ telescopeData.observatory_name }} > {{ telescopeData.site_name }} >
+      <router-link :to="{name: 'telescopeDetail', params: {id: telescopeData.id}}">{{ telescopeData.name }}</router-link>
+    </h4>
+    <h1>
+      {{ instrumentData.name }}
+      <v-btn v-if="instrumentData.instrument_url" color="blue-darken-2" icon="mdi-open-in-new" variant="text" v-tooltip="instrumentData.instrument_url" :href="instrumentData.instrument_url" target="_blank"></v-btn>
+    </h1>
+    <v-divider thickness="3"></v-divider>
+    <v-row>
+      <v-col cols="9" class="large-text">
+        <v-row class="mt-2 ml-2">
+          <p class="label-text">Status: </p>
+          <b class="ml-2">{{ instrumentData.status }}</b>
+        </v-row>
+      </v-col>
+    </v-row>
+    <v-row class="mt-5 ml-2" v-if="filtersStore.telescopes">
+      <v-table style="width:1150px;">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 16%;">Optical Element Type</th>
+            <th class="text-left border-left">Elements</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="oe_type in Object.keys(instrumentData.optical_element_groups)"
+            :key="oe_type"
+          >
+            <td>{{ oe_type }}</td>
+            <td class="border-left">{{ instrumentData.optical_element_groups[oe_type].options.map(obj => obj.name).join(', ') }}</td>
+          </tr>
+        </tbody>
+      </v-table>
+    </v-row>
+    <v-row class="mt-7 ml-2" v-if="filtersStore.telescopes">
+      <v-table style="width:1150px;">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 16%;">Operation Mode</th>
+            <th class="text-left border-left">Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="mode in Object.keys(instrumentData.operation_modes)"
+            :key="mode"
+          >
+            <td>{{ mode }}</td>
+            <td class="border-left">{{ instrumentData.operation_modes[mode].options.map(obj => obj.name).join(', ') }}</td>
+          </tr>
+        </tbody>
+      </v-table>
+    </v-row>
   </v-container>
 </template>
-<style>
+<style scoped>
+.border-left {
+  border-left: 1px solid dimgray;
+}
 
+.large-text {
+  font-size: 1.4rem;
+  color: lightgray;
+}
+
+.label-text {
+  color: darkgray;
+}
 </style>

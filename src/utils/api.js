@@ -1,6 +1,6 @@
 
 // handles api requests with the backend
-async function fetchApiCall({ url, method, body = null, header, successCallback = null, failCallback = handleError }) {
+async function fetchApiCall({ url, method, body = null, header, signal = null, successCallback = null, failCallback = handleError }) {
 
   const defaultHeader = {
     'Content-Type': 'application/json',
@@ -10,7 +10,8 @@ async function fetchApiCall({ url, method, body = null, header, successCallback 
   const config = {
     method: method,
     headers: header ? header : defaultHeader,
-    body: body ? JSON.stringify(body) : null
+    body: body ? JSON.stringify(body) : null,
+    signal: signal
   }
 
   try {
