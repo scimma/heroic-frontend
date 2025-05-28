@@ -13,6 +13,7 @@ const props = defineProps({
   }
 })
 
+const ONEDAY = 3600 * 1000 * 24;
 const filtersStore = useFiltersStore()
 const timelineDiv = ref(null);
 const telescopeStatuses = ref([]);
@@ -33,20 +34,24 @@ const options = {
   }
 };
 
+function statusTooltip(status) {
+  return '<h4>' + status.status + '</h4><br><p>' + (status.reason || '') + '</p>';
+}
+
 const start = computed(() => {
-  return filtersStore.queryParams.base.start || new Date(Date.now() - (3600 * 1000 * 24 * 7)).toISOString();
+  return filtersStore.queryParams.base.start || new Date(Date.now() - (ONEDAY * 7)).toISOString();
 })
 
 const startMinusOne = computed(() => {
-  return new Date(new Date(start.value).getTime() - (3600 * 1000 * 24)).toISOString();
+  return new Date(new Date(start.value).getTime() - ONEDAY).toISOString();
 })
 
 const end = computed(() => {
-  return filtersStore.queryParams.base.end || new Date(Date.now() + (3600 * 1000 * 24)).toISOString();
+  return filtersStore.queryParams.base.end || new Date(Date.now() + ONEDAY).toISOString();
 })
 
 const endPlusOne = computed(() => {
-  return new Date(new Date(end.value).getTime() + (3600 * 1000 * 24)).toISOString();
+  return new Date(new Date(end.value).getTime() + ONEDAY).toISOString();
 })
 
 const timelineData = computed(() => {
@@ -61,7 +66,7 @@ const timelineData = computed(() => {
           start: status.date,
           end: lastStatus.date,
           className: status.status,
-          title: '<h4>' + status.status + '</h4><br><p>' + (status.reason || '') + '</p>',
+          title: statusTooltip(status),
           toggle: 'tooltip',
           html: true,
           type: 'range'
@@ -73,7 +78,7 @@ const timelineData = computed(() => {
           start: status.date,
           end: end.value,
           className: status.status,
-          title: '<h4>' + status.status + '</h4><br><p>' + (status.reason || '') + '</p>',
+          title: statusTooltip(status),
           toggle: 'tooltip',
           html: true,
           type: 'range'

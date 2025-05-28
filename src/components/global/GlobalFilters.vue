@@ -20,13 +20,17 @@ function setDateRange(offset_start, offset_end) {
   filtersStore.queryParams.base.end = new Date(Date.now() + (3600 * 1000 * 24 * offset_end)).toISOString();
 }
 
+function jdToMjd(jd) {
+  return jd - 2400000.5;
+}
+
 function fillInTarget(targetData) {
   filtersStore.queryParams.siderealTarget.ra = targetData.ra_d || targetData.ra || null
   filtersStore.queryParams.siderealTarget.dec = targetData.dec_c || targetData.dec || null
   filtersStore.queryParams.siderealTarget.proper_motion_ra = targetData.pmra || null
   filtersStore.queryParams.siderealTarget.proper_motion_dec = targetData.pmdec || null
   filtersStore.queryParams.siderealTarget.parallax = targetData.plx_value || null
-  filtersStore.queryParams.nonSiderealTarget.epoch_of_elements = targetData.epoch_jd ? targetData.epoch_jd - 2400000.5 : null;
+  filtersStore.queryParams.nonSiderealTarget.epoch_of_elements = targetData.epoch_jd ? jdToMjd(targetData.epoch_jd) : null;
   filtersStore.queryParams.nonSiderealTarget.longitude_of_ascending_node = targetData.ascending_node || null;
   filtersStore.queryParams.nonSiderealTarget.orbital_inclination = targetData.inclination || null;
   filtersStore.queryParams.nonSiderealTarget.argument_of_perihelion = targetData.argument_of_perihelion || null;
@@ -35,7 +39,7 @@ function fillInTarget(targetData) {
   filtersStore.queryParams.nonSiderealTarget.mean_anomaly = targetData.mean_anomaly || null;
   filtersStore.queryParams.nonSiderealTarget.daily_motion = targetData.mean_daily_motion || null;
   filtersStore.queryParams.nonSiderealTarget.perihelion_distance = targetData.perihelion_distance || null;
-  filtersStore.queryParams.nonSiderealTarget.epoch_of_perihelion = targetData.perihelion_date_jd ? targetData.perihelion_date_jd - 2400000.5 : null;
+  filtersStore.queryParams.nonSiderealTarget.epoch_of_perihelion = targetData.perihelion_date_jd ? jdToMjd(targetData.perihelion_date_jd) : null;
 }
 
 function clearTargetErrors() {
