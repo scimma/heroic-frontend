@@ -8,10 +8,9 @@ import { useFiltersStore } from '@/stores/filters'
 
 const filtersStore = useFiltersStore()
 
-
 onMounted(async () => {
   // Fetch the telescope options from the API to populate the telescope select field
-  const url = import.meta.env.VITE_HEROIC_API_URL + 'observatories' + '/?limit=1000';
+  const url = import.meta.env.VITE_HEROIC_URL + 'api/observatories' + '/?limit=1000';
   await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
     let telescopes = {};
     data.results.forEach(observatory => {

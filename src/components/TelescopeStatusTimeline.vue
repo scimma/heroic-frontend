@@ -146,14 +146,14 @@ const timelineGroups = computed(() => {
 })
 
 async function loadTelescopeStatus () {
-  const url = import.meta.env.VITE_HEROIC_API_URL + 'telescope-statuses' + '/?limit=1000&telescope=' + props.telescope + '&start=' + start.value + '&end=' + end.value;
+  const url = import.meta.env.VITE_HEROIC_URL + 'api/telescope-statuses' + '/?limit=1000&telescope=' + props.telescope + '&start=' + start.value + '&end=' + end.value;
   await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
     telescopeStatuses.value = data.results;
   }})
 }
 
 async function loadTelescopeDarkIntervals () {
-  const url = import.meta.env.VITE_HEROIC_API_URL + 'telescopes/' + props.telescope + '/dark_intervals/?start=' + startMinusOne.value + '&end=' + endPlusOne.value;
+  const url = import.meta.env.VITE_HEROIC_URL + 'api/telescopes/' + props.telescope + '/dark_intervals/?start=' + startMinusOne.value + '&end=' + endPlusOne.value;
   await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
     telescopeDarkIntervals.value = data;
   }})

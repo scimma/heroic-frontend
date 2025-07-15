@@ -30,7 +30,7 @@ async function loadItems ({ page, itemsPerPage, sortBy }) {
   loading.value = true
   let offset = (page-1) * itemsPerPage;
 
-  const url = import.meta.env.VITE_HEROIC_API_URL + props.apiKey + '/?limit=' + itemsPerPage + '&offset=' + offset;
+  const url = import.meta.env.VITE_HEROIC_URL + 'api/' + props.apiKey + '/?limit=' + itemsPerPage + '&offset=' + offset;
   await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
     serverItems.value = data.results;
     totalItems.value = data.count;
