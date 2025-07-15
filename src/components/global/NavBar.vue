@@ -2,11 +2,9 @@
 import { onMounted, ref} from 'vue';
 import { RouterLink } from 'vue-router'
 import { useUserStore } from '@/stores/user';
-import { useRouter } from 'vue-router'
 import { fetchApiCall } from '@/utils/api'
 
 const userStore = useUserStore()
-const router = useRouter();
 const revokeTokenDialog = ref(false);
 
 function login() {
@@ -31,10 +29,8 @@ async function copyToken() {
 }
 
 async function revokeToken() {
-  console.log("Token revoked!");
   const url = import.meta.env.VITE_HEROIC_URL + 'api/revoke_api_token/';
   await fetchApiCall({url: url, method: 'POST', credentials: 'include', successCallback: (data) => {
-      console.log(data);
       getProfile();
     }})
 
@@ -43,7 +39,6 @@ async function revokeToken() {
 async function getProfile() {
   const url = import.meta.env.VITE_HEROIC_URL + 'api/profile/';
   await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (profile) => {
-    console.log(profile);
     userStore.profile = profile;
     userStore.midLogin = false;
     userStore.loggedIn = true;
