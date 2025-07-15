@@ -1,9 +1,13 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet.markercluster/dist/leaflet.markercluster.js'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
+import terminator from '@joergdietrich/leaflet.terminator';
+
+const router = useRouter();
 
 const props = defineProps({
   telescopes: {
@@ -14,6 +18,7 @@ const props = defineProps({
 
 let imageMap = null;
 const leafletDiv = ref(null);
+let markers = null;
 
 const GOOD_COLOR = 'darkgreen';
 const PARTIAL_COLOR = 'goldenrod';
@@ -21,9 +26,12 @@ const BAD_COLOR = 'darkred';
 
 onMounted(() => {
   leafletSetup();
+  loadTelescopeIcons();
 })
 
-watch(() => props.telescopes, () => loadTelescopeIcons())
+watch(() => props.telescopes, () => {
+  loadTelescopeIcons();
+})
 
 
 function createTelescopeIcon(telescope) {
@@ -37,7 +45,11 @@ function createTelescopeIcon(telescope) {
 }
 
 function loadTelescopeIcons() {
-  var markers = L.markerClusterGroup({
+  if (markers) {
+    imageMap.removeLayer(markers);
+    markers = null;
+  }
+  markers = L.markerClusterGroup({
     iconCreateFunction: function(cluster) {
       var childrenMarkers = cluster.getAllChildMarkers();
       var color;
@@ -64,10 +76,20 @@ function loadTelescopeIcons() {
     const telescope = props.telescopes[i];
     var marker = L.marker(new L.LatLng(telescope.latitude, telescope.longitude), {title: telescope.name, icon: createTelescopeIcon(telescope)});
     marker.telescopeStatus = telescope.status;
-    marker.bindPopup('<a href="/telescopes/' + telescope.id + '">' + telescope.name + '</a>');
+    var popup = document.createElement('a');
+    popup.textContent = telescope.name;
+    popup.style.cursor = 'pointer';
+    popup.addEventListener('click', function() {
+      goToTelescope(telescope.id);
+    })
+    marker.bindPopup(popup);
     markers.addLayer(marker);
   }
   imageMap.addLayer(markers);
+}
+
+function goToTelescope(id) {
+  router.push({name: 'telescopeDetail', params: {id: id}});
 }
 
 function leafletSetup(){
@@ -79,8 +101,7 @@ function leafletSetup(){
       imageMap.setView([0, 0], 2);
     }
   })
-  console.log(imageMap.getSize())
-  console.log(imageMap.getPixelWorldBounds())
+  terminator().addTo(imageMap);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {noWrap: true}).addTo(imageMap);
 }
 
