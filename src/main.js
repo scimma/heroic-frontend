@@ -2,6 +2,7 @@ import "./assets/main.css";
 
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify';
@@ -16,6 +17,9 @@ import '@vuepic/vue-datepicker/dist/main.css'
 
 import 'leaflet/dist/leaflet.css'
 
+const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
+
 const vuetify = createVuetify({
   theme: {
     defaultTheme: 'dark'
@@ -27,7 +31,7 @@ const vuetify = createVuetify({
 const app = createApp(App);
 
 app.use(vuetify);
-app.use(createPinia());
+app.use(pinia);
 app.use(router);
 app.component('VueDatePicker', VueDatePicker);
 

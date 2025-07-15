@@ -1,6 +1,15 @@
+function getCSRFTokenFromCookie() {
+  const value = document.cookie;
+  const parts = value.split('csrftoken=');
+  if (parts.length === 2) {
+    return parts[1].split(';')[0];
+  }
+  else return null;
+}
+
 
 // handles api requests with the backend
-async function fetchApiCall({ url, method, body = null, header, signal = null, successCallback = null, failCallback = handleError }) {
+async function fetchApiCall({ url, method, body = null, header, signal = null, credentials = null, successCallback = null, failCallback = handleError }) {
 
   const defaultHeader = {
     'Content-Type': 'application/json',
@@ -12,6 +21,16 @@ async function fetchApiCall({ url, method, body = null, header, signal = null, s
     headers: header ? header : defaultHeader,
     body: body ? JSON.stringify(body) : null,
     signal: signal
+  }
+  if (credentials) {
+    config.credentials = credentials;
+  }
+  if (credentials && (method != 'GET')) {
+    // Include CSRF token from cookie in request headers
+    let csrfToken = getCSRFTokenFromCookie();
+    if (csrfToken) {
+      config.headers['X-CSRFToken'] = csrfToken
+    }
   }
 
   try {
