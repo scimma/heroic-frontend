@@ -34,3 +34,9 @@ npm run build
 ```sh
 npm run lint
 ```
+
+## Deployment
+
+Set the following environment variables:
+* VITE_HEROIC_URL - backend url with trailing slash, defaults to 'http://127.0.0.1:8000/'
+* VITE_SIMBAD2K_API_URL - simbad2k service url, defaults to LCO's at 'https://simbad2k.lco.global/'
