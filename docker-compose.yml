@@ -1,0 +1,13 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: heroic-frontend
+    restart: always
+    networks:
+      - heroic_net
+
+networks:
+  heroic_net:
+    external: true
