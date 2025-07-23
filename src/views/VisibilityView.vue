@@ -1,7 +1,6 @@
 <script setup>
 import { ref, provide, watch, computed, onMounted } from 'vue'
 import { useFiltersStore } from '@/stores/filters'
-import { fetchApiCall } from '@/utils/api'
 import GWVisibilityChart from '@/components/GWVisibilityChart.vue'
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -33,10 +32,6 @@ const airmassPlot = ref(null);
 const seriesIndexToTelescope = ref([]);
 const filtersStore = useFiltersStore()
 
-// Loading state for manual trigger
-const manualLoading = ref(false);
-const manualError = ref(null);
-
 // Check if any GW detectors are selected or available
 const hasGWDetectors = computed(() => {
   if (!filtersStore.telescopes) return false;
@@ -45,142 +40,39 @@ const hasGWDetectors = computed(() => {
     id.includes('ligo') || id.includes('virgo') || id.includes('kagra')
   );
   
-  console.log('All GW detectors found:', allGWDetectors);
-  
   // If specific telescopes are selected, check if any are GW
   if (filtersStore.queryParams.base.telescopes && filtersStore.queryParams.base.telescopes.length > 0) {
-    const hasGW = filtersStore.queryParams.base.telescopes.some(t => 
+    return filtersStore.queryParams.base.telescopes.some(t => 
       t.includes('ligo') || t.includes('virgo') || t.includes('kagra')
     );
-    console.log('Selected telescopes have GW:', hasGW, filtersStore.queryParams.base.telescopes);
-    return hasGW;
   }
   
   // Otherwise, check if any GW detectors exist
-  console.log('Has GW detectors:', allGWDetectors.length > 0);
   return allGWDetectors.length > 0;
 });
 
 // Check if we should show GW visibility
 const showGWVisibility = computed(() => {
-  const hasStart = !!filtersStore.queryParams.base.start;
-  const hasEnd = !!filtersStore.queryParams.base.end;
-  const show = hasGWDetectors.value && hasStart && hasEnd;
-  console.log('Show GW visibility computed:', {
-    show,
-    hasGWDetectors: hasGWDetectors.value,
-    hasStart,
-    hasEnd,
-    start: filtersStore.queryParams.base.start,
-    end: filtersStore.queryParams.base.end
-  });
-  return show;
+  return hasGWDetectors.value && 
+         !!filtersStore.queryParams.base.start && 
+         !!filtersStore.queryParams.base.end;
 });
 
 // Query GW visibility when appropriate
 watch([() => filtersStore.queryParams.base.start, () => filtersStore.queryParams.base.end, 
        () => filtersStore.queryParams.siderealTarget.ra, () => filtersStore.queryParams.siderealTarget.dec,
        () => filtersStore.queryParams.base.telescopes], () => {
-  console.log('GW visibility watch triggered', {
-    showGWVisibility: showGWVisibility.value,
-    ra: filtersStore.queryParams.siderealTarget.ra,
-    dec: filtersStore.queryParams.siderealTarget.dec
-  });
   if (showGWVisibility.value && filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
-    console.log('Calling queryGWVisibility...');
     filtersStore.queryGWVisibility();
   }
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 // Also query on mount if conditions are met
 onMounted(() => {
-  console.log('VisibilityView mounted, checking if should query GW visibility');
   if (showGWVisibility.value && filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
-    console.log('Calling queryGWVisibility on mount...');
     filtersStore.queryGWVisibility();
   }
 });
-
-// Manual trigger function
-async function manualTriggerVisibility() {
-  console.log('Manual trigger clicked');
-  console.log('Current RA:', filtersStore.queryParams.siderealTarget.ra);
-  console.log('Current Dec:', filtersStore.queryParams.siderealTarget.dec);
-  console.log('Current start:', filtersStore.queryParams.base.start);
-  console.log('Current end:', filtersStore.queryParams.base.end);
-  
-  // Build the payload manually
-  const payload = {
-    start: filtersStore.queryParams.base.start,
-    end: filtersStore.queryParams.base.end,
-    max_airmass: filtersStore.queryParams.base.max_airmass,
-    min_lunar_distance: filtersStore.queryParams.base.min_lunar_distance,
-    max_lunar_phase: filtersStore.queryParams.base.max_lunar_phase,
-    ra: filtersStore.queryParams.siderealTarget.ra,
-    dec: filtersStore.queryParams.siderealTarget.dec
-  };
-  
-  console.log('Sending payload:', payload);
-  manualLoading.value = true;
-  manualError.value = null;
-  
-  try {
-    const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/intervals';
-    await fetchApiCall({
-      url: url, 
-      method: 'POST', 
-      body: payload, 
-      successCallback: (data) => {
-        console.log('Visibility API response:', data);
-        filtersStore.visibilityResults = data;
-        filtersStore.filteredTelescopes = Object.values(filtersStore.telescopes).filter(obj => Object.keys(data).filter(key => data[key].length).includes(obj['id']));
-        
-        // Now query airmass
-        const telescopesWithVisibility = Object.keys(data).filter(key => data[key].length);
-        if (telescopesWithVisibility.length > 0) {
-          queryAirmassManually(telescopesWithVisibility);
-        }
-        manualLoading.value = false;
-      }, 
-      failCallback: (errors) => {
-        console.error('Visibility API error:', errors);
-        manualError.value = JSON.stringify(errors);
-        manualLoading.value = false;
-      }
-    });
-  } catch (error) {
-    console.error('Error calling visibility API:', error);
-    manualError.value = error.toString();
-    manualLoading.value = false;
-  }
-}
-
-async function queryAirmassManually(telescopes) {
-  const payload = {
-    start: filtersStore.queryParams.base.start,
-    end: filtersStore.queryParams.base.end,
-    max_airmass: filtersStore.queryParams.base.max_airmass,
-    min_lunar_distance: filtersStore.queryParams.base.min_lunar_distance,
-    max_lunar_phase: filtersStore.queryParams.base.max_lunar_phase,
-    ra: filtersStore.queryParams.siderealTarget.ra,
-    dec: filtersStore.queryParams.siderealTarget.dec,
-    telescopes: telescopes
-  };
-  
-  const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/airmass';
-  await fetchApiCall({
-    url: url, 
-    method: 'POST', 
-    body: payload, 
-    successCallback: (data) => {
-      console.log('Airmass API response:', data);
-      filtersStore.airmassResults = data;
-    }, 
-    failCallback: (errors) => {
-      console.error('Airmass API error:', errors);
-    }
-  });
-}
 
 const airmassChartUpdateOptions = ref({
   replaceMerge: ['series', 'legend']
@@ -348,30 +240,8 @@ watch(() => filtersStore.$state.airmassErrors, () => {
       </v-col>
       <v-col align="center" v-else>
         <h1 class="mt-10">You must fill in Target details and a date range to generate visibility</h1>
-        <v-btn 
-          color="primary" 
-          size="large"
-          class="mt-4"
-          @click="manualTriggerVisibility"
-          :loading="manualLoading"
-        >
-          Manually Trigger Visibility Query
-        </v-btn>
-        <v-btn 
-          v-if="hasGWDetectors"
-          color="secondary" 
-          size="large"
-          class="mt-4 ml-4"
-          @click="filtersStore.queryGWVisibility()"
-          :loading="filtersStore.loadingGWVisibility"
-        >
-          Trigger GW Visibility
-        </v-btn>
-        <div v-if="manualError" class="mt-4 text-error">
-          Error: {{ manualError }}
-        </div>
         <div v-if="filtersStore.visibilityErrors && Object.keys(filtersStore.visibilityErrors).length > 0" class="mt-4 text-error">
-          Store Error: {{ filtersStore.visibilityErrors }}
+          Error: {{ filtersStore.visibilityErrors }}
         </div>
       </v-col>
     </v-row>
