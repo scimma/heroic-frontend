@@ -6,16 +6,16 @@ export const useFiltersStore = defineStore("filters", {
     return {
       queryParams: {
         base: {
-          start: null,
-          end: null,
+          start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+          end: new Date().toISOString(), // Now
           telescopes: null,
           max_airmass: 2.0,
           min_lunar_distance: 0.0,
           max_lunar_phase: 1.0,
         },
         siderealTarget: {
-          ra: null,
-          dec: null,
+          ra: 10.684708333, // Andromeda galaxy (M31)
+          dec: 41.26875,    // Andromeda galaxy (M31)
           proper_motion_ra: null,
           proper_motion_dec: null,
           epoch: 2000.0,
@@ -37,7 +37,7 @@ export const useFiltersStore = defineStore("filters", {
       },
       telescopes: null,
       filteredTelescopes: [],
-      targetName: null,
+      targetName: 'M31',  // Default to Andromeda
       targetType: 'SIDEREAL',
       nonSiderealType: null,
       visibilityAbort: null,
@@ -47,7 +47,12 @@ export const useFiltersStore = defineStore("filters", {
       visibilityResults: null,
       visibilityErrors: {},
       airmassResults: null,
-      airmassErrors: {}
+      airmassErrors: {},
+      // GW visibility
+      loadingGWVisibility: false,
+      gwVisibilityResults: null,
+      gwVisibilityErrors: {},
+      gwVisibilityAbort: null
     };
   },
   getters: {
@@ -76,20 +81,32 @@ export const useFiltersStore = defineStore("filters", {
     }
   },
   actions: {
-    async queryVisibilityAndAirmass() {
-      if (this.loadingVisibility && this.visibilityAbort) {
-        this.visibilityAbort.signal.onabort = () => {
+    queryVisibilityAndAirmass() {
+      console.log('=== NEW queryVisibilityAndAirmass called ===');
+      // Use setTimeout to ensure this runs
+      setTimeout(() => {
+        if (this.loadingVisibility && this.visibilityAbort) {
+          this.visibilityAbort.signal.onabort = () => {
+            this.queryVisibility();
+          }
+          this.visibilityAbort.abort();
+        }
+        else {
           this.queryVisibility();
         }
-        this.visibilityAbort.abort();
-      }
-      else {
-        this.queryVisibility();
-      }
+      }, 0);
     },
     async queryVisibility() {
       this.visibilityAbort = new AbortController();
       let queryPayload = this.visilibityInput;
+      
+      // Check if we have the required target coordinates
+      if (this.targetType === 'SIDEREAL' && (!queryPayload.ra || !queryPayload.dec)) {
+        this.loadingVisibility = false;
+        this.visibilityErrors = {'Error': 'Target coordinates (RA/Dec) are required'};
+        return;
+      }
+      
       this.loadingVisibility = true;
       this.visibilityResults = null;
       this.filteredTelescopes = Object.values(this.telescopes);
@@ -113,7 +130,7 @@ export const useFiltersStore = defineStore("filters", {
           this.loadingVisibility = false;
           this.visibilityAbort = null;
         }
-        console.error('Failed to get target visibility intervals: ' + errors);
+        console.error('Failed to get target visibility intervals:', errors);
       }})
     },
     async queryAirmass(telescopesOverride) {
@@ -143,6 +160,65 @@ export const useFiltersStore = defineStore("filters", {
           this.airmassAbort = null;
         }})
       }
+    },
+    async queryGWVisibility() {
+      // Cancel any existing query
+      if (this.gwVisibilityAbort) {
+        this.gwVisibilityAbort.abort();
+      }
+      
+      this.gwVisibilityAbort = new AbortController();
+      
+      // Check if we have required coordinates
+      if (!this.queryParams.siderealTarget.ra || !this.queryParams.siderealTarget.dec) {
+        this.gwVisibilityErrors = {'Error': 'RA and Dec coordinates are required for GW visibility'};
+        console.log('GW visibility requires RA/Dec coordinates');
+        return;
+      }
+      
+      // Build query payload
+      let queryPayload = {
+        ra: this.queryParams.siderealTarget.ra,
+        dec: this.queryParams.siderealTarget.dec,
+        start: this.queryParams.base.start,
+        end: this.queryParams.base.end,
+        time_resolution_minutes: 30 // Default 30 minute resolution
+      };
+      
+      // Add specific telescopes if selected
+      if (this.queryParams.base.telescopes && this.queryParams.base.telescopes.length > 0) {
+        // Filter to only include GW detectors
+        const gwTelescopes = this.queryParams.base.telescopes.filter(t => 
+          t.includes('ligo') || t.includes('virgo') || t.includes('kagra')
+        );
+        if (gwTelescopes.length > 0) {
+          queryPayload.telescopes = gwTelescopes;
+        }
+      }
+      
+      this.loadingGWVisibility = true;
+      this.gwVisibilityErrors = {};
+      
+      const url = import.meta.env.VITE_HEROIC_URL + 'api/gw/visibility';
+      fetchApiCall({
+        url: url, 
+        method: 'POST', 
+        body: queryPayload, 
+        signal: this.gwVisibilityAbort.signal,
+        successCallback: (data) => {
+          this.gwVisibilityResults = data;
+          this.loadingGWVisibility = false;
+          this.gwVisibilityAbort = null;
+        }, 
+        failCallback: (errors) => {
+          if (errors.name != 'AbortError') {
+            this.gwVisibilityErrors = errors;
+            this.loadingGWVisibility = false;
+            this.gwVisibilityAbort = null;
+          }
+          console.error('Failed to get GW visibility:', errors);
+        }
+      });
     }
   }
 });
