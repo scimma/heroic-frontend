@@ -192,7 +192,7 @@ export const useFiltersStore = defineStore("filters", {
       this.loadingGWVisibility = true;
       this.gwVisibilityErrors = {};
       
-      const url = import.meta.env.VITE_HEROIC_URL + 'api/gw/visibility';
+      const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/gw';
       fetchApiCall({
         url: url, 
         method: 'POST', 
