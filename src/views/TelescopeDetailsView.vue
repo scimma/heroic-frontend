@@ -101,8 +101,8 @@ function generateItemLink(item) {
               >
                 <td><router-link :to="generateItemLink(inst)">{{ inst.name }}</router-link></td>
                 <td class="border-left">{{ inst.status }}</td>
-                <td class="border-left">{{ Object.keys(inst.optical_element_groups).join(', ') }}</td>
-                <td class="border-left">{{ Object.keys(inst.operation_modes).join(', ') }}</td>
+                <td class="border-left">{{ inst.optical_element_groups ? Object.keys(inst.optical_element_groups).join(', ') : 'N/A' }}</td>
+                <td class="border-left">{{ inst.operation_modes ? Object.keys(inst.operation_modes).join(', ') : 'N/A' }}</td>
               </tr>
             </tbody>
           </v-table>

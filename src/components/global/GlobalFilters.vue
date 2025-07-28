@@ -172,11 +172,12 @@ const telescopesString = computed(() => {
   }
 })
 
+// Watch for changes and trigger visibility queries
 watchDebounced(() => filtersStore.$state.queryParams, () => {
   if (dateClass.value == 'fields-complete' && targetClass.value == 'fields-complete') {
     filtersStore.queryVisibilityAndAirmass();
   }
-}, { debounce: 500, deep: true})
+}, { debounce: 500, deep: true, immediate: true })
 
 
 </script>

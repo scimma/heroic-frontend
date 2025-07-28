@@ -1,6 +1,7 @@
 <script setup>
-import { ref, provide, watch } from 'vue'
+import { ref, provide, watch, computed, onMounted } from 'vue'
 import { useFiltersStore } from '@/stores/filters'
+import GWVisibilityChart from '@/components/GWVisibilityChart.vue'
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { LineChart } from 'echarts/charts';
@@ -31,6 +32,47 @@ const airmassPlot = ref(null);
 const seriesIndexToTelescope = ref([]);
 const filtersStore = useFiltersStore()
 
+// Check if any GW detectors are selected or available
+const hasGWDetectors = computed(() => {
+  if (!filtersStore.telescopes) return false;
+  
+  const allGWDetectors = Object.keys(filtersStore.telescopes).filter(id => 
+    id.includes('ligo') || id.includes('virgo') || id.includes('kagra')
+  );
+  
+  // If specific telescopes are selected, check if any are GW
+  if (filtersStore.queryParams.base.telescopes && filtersStore.queryParams.base.telescopes.length > 0) {
+    return filtersStore.queryParams.base.telescopes.some(t => 
+      t.includes('ligo') || t.includes('virgo') || t.includes('kagra')
+    );
+  }
+  
+  // Otherwise, check if any GW detectors exist
+  return allGWDetectors.length > 0;
+});
+
+// Check if we should show GW visibility
+const showGWVisibility = computed(() => {
+  return hasGWDetectors.value && 
+         !!filtersStore.queryParams.base.start && 
+         !!filtersStore.queryParams.base.end;
+});
+
+// Query GW visibility when appropriate
+watch([() => filtersStore.queryParams.base.start, () => filtersStore.queryParams.base.end, 
+       () => filtersStore.queryParams.siderealTarget.ra, () => filtersStore.queryParams.siderealTarget.dec,
+       () => filtersStore.queryParams.base.telescopes], () => {
+  if (showGWVisibility.value && filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
+    filtersStore.queryGWVisibility();
+  }
+}, { deep: true, immediate: true });
+
+// Also query on mount if conditions are met
+onMounted(() => {
+  if (showGWVisibility.value && filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
+    filtersStore.queryGWVisibility();
+  }
+});
 
 const airmassChartUpdateOptions = ref({
   replaceMerge: ['series', 'legend']
@@ -158,6 +200,33 @@ watch(() => filtersStore.$state.airmassErrors, () => {
 
 <template>
   <v-container fluid>
+    <!-- GW Visibility Section -->
+    <v-row v-if="showGWVisibility" class="mb-6">
+      <v-col cols="12">
+        <v-card color="grey-darken-4" class="pa-4">
+          <v-card-title class="text-h5">
+            Gravitational Wave Network Visibility
+          </v-card-title>
+          <v-card-text>
+            <div v-if="!filtersStore.queryParams.siderealTarget.ra || !filtersStore.queryParams.siderealTarget.dec" class="text-center py-8">
+              <v-icon size="64" color="grey">mdi-target</v-icon>
+              <h3 class="mt-4">Target Coordinates Required</h3>
+              <p class="text-grey mt-2">Please enter RA and Dec coordinates to see GW network visibility</p>
+            </div>
+            <GWVisibilityChart 
+              v-else
+              :gw-data="filtersStore.gwVisibilityResults"
+              :loading="filtersStore.loadingGWVisibility"
+            />
+            <div v-if="filtersStore.gwVisibilityErrors && Object.keys(filtersStore.gwVisibilityErrors).length > 0" class="mt-4 text-error">
+              GW Error: {{ filtersStore.gwVisibilityErrors }}
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+    
+    <!-- Traditional Visibility Section -->
     <v-row>
       <v-col align="center" v-if="filtersStore.airmassResults">
         <h2>Airmass Plot</h2>
@@ -171,6 +240,9 @@ watch(() => filtersStore.$state.airmassErrors, () => {
       </v-col>
       <v-col align="center" v-else>
         <h1 class="mt-10">You must fill in Target details and a date range to generate visibility</h1>
+        <div v-if="filtersStore.visibilityErrors && Object.keys(filtersStore.visibilityErrors).length > 0" class="mt-4 text-error">
+          Error: {{ filtersStore.visibilityErrors }}
+        </div>
       </v-col>
     </v-row>
   </v-container>
