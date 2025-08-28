@@ -6,16 +6,16 @@ export const useFiltersStore = defineStore("filters", {
     return {
       queryParams: {
         base: {
-          start: null,
-          end: null,
-          telescopes: null,
+          start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+          end: new Date().toISOString(), // Now
+          telescopes: ['ligo.hanford.h1', 'ligo.livingston.l1', 'virgo.cascina.v1', 'kagra.kamioka.k1'], // All GW detectors
           max_airmass: 2.0,
           min_lunar_distance: 0.0,
           max_lunar_phase: 1.0,
         },
         siderealTarget: {
-          ra: null,
-          dec: null,
+          ra: 197.450375, // NGC 4993 (host of GW170817)
+          dec: -23.38148,  // NGC 4993 (host of GW170817)
           proper_motion_ra: null,
           proper_motion_dec: null,
           epoch: 2000.0,
@@ -37,7 +37,7 @@ export const useFiltersStore = defineStore("filters", {
       },
       telescopes: null,
       filteredTelescopes: [],
-      targetName: null,
+      targetName: 'NGC 4993',  // Default to NGC 4993 (GW170817 host)
       targetType: 'SIDEREAL',
       nonSiderealType: null,
       visibilityAbort: null,
@@ -47,7 +47,12 @@ export const useFiltersStore = defineStore("filters", {
       visibilityResults: null,
       visibilityErrors: {},
       airmassResults: null,
-      airmassErrors: {}
+      airmassErrors: {},
+      // GW visibility
+      loadingGWVisibility: false,
+      gwVisibilityResults: null,
+      gwVisibilityErrors: {},
+      gwVisibilityAbort: null
     };
   },
   getters: {
@@ -90,6 +95,14 @@ export const useFiltersStore = defineStore("filters", {
     async queryVisibility() {
       this.visibilityAbort = new AbortController();
       let queryPayload = this.visilibityInput;
+      
+      // Check if we have the required target coordinates
+      if (this.targetType === 'SIDEREAL' && (!queryPayload.ra || !queryPayload.dec)) {
+        this.loadingVisibility = false;
+        this.visibilityErrors = {'Error': 'Target coordinates (RA/Dec) are required'};
+        return;
+      }
+      
       this.loadingVisibility = true;
       this.visibilityResults = null;
       this.filteredTelescopes = Object.values(this.telescopes);
@@ -113,7 +126,6 @@ export const useFiltersStore = defineStore("filters", {
           this.loadingVisibility = false;
           this.visibilityAbort = null;
         }
-        console.error('Failed to get target visibility intervals: ' + errors);
       }})
     },
     async queryAirmass(telescopesOverride) {
@@ -138,11 +150,67 @@ export const useFiltersStore = defineStore("filters", {
           this.airmassAbort = null;
         }, failCallback: (errors) => {
           this.airmassErrors = errors;
-          console.error('Failed to get target airmass: ' + errors);
           this.loadingAirmass = false;
           this.airmassAbort = null;
         }})
       }
+    },
+    async queryGWVisibility() {
+      // Cancel any existing query
+      if (this.gwVisibilityAbort) {
+        this.gwVisibilityAbort.abort();
+      }
+      
+      this.gwVisibilityAbort = new AbortController();
+      
+      // Check if we have required coordinates
+      if (!this.queryParams.siderealTarget.ra || !this.queryParams.siderealTarget.dec) {
+        this.gwVisibilityErrors = {'Error': 'RA and Dec coordinates are required for GW visibility'};
+        return;
+      }
+      
+      // Build query payload
+      let queryPayload = {
+        ra: this.queryParams.siderealTarget.ra,
+        dec: this.queryParams.siderealTarget.dec,
+        start: this.queryParams.base.start,
+        end: this.queryParams.base.end,
+        time_resolution_minutes: 30 // Default 30 minute resolution
+      };
+      
+      // Add specific telescopes if selected
+      if (this.queryParams.base.telescopes && this.queryParams.base.telescopes.length > 0) {
+        // Filter to only include GW detectors
+        const gwTelescopes = this.queryParams.base.telescopes.filter(t => 
+          t.includes('ligo') || t.includes('virgo') || t.includes('kagra')
+        );
+        if (gwTelescopes.length > 0) {
+          queryPayload.telescopes = gwTelescopes;
+        }
+      }
+      
+      this.loadingGWVisibility = true;
+      this.gwVisibilityErrors = {};
+      
+      const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/gw';
+      fetchApiCall({
+        url: url, 
+        method: 'POST', 
+        body: queryPayload, 
+        signal: this.gwVisibilityAbort.signal,
+        successCallback: (data) => {
+          this.gwVisibilityResults = data;
+          this.loadingGWVisibility = false;
+          this.gwVisibilityAbort = null;
+        }, 
+        failCallback: (errors) => {
+          if (errors.name != 'AbortError') {
+            this.gwVisibilityErrors = errors;
+            this.loadingGWVisibility = false;
+            this.gwVisibilityAbort = null;
+          }
+        }
+      });
     }
   }
 });

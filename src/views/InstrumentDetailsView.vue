@@ -43,7 +43,7 @@ const telescopeData = computed(() => {
         </v-row>
       </v-col>
     </v-row>
-    <v-row class="mt-5 ml-2" v-if="filtersStore.telescopes">
+    <v-row class="mt-5 ml-2" v-if="filtersStore.telescopes && instrumentData.optical_element_groups">
       <v-table style="width:1150px;">
         <thead>
           <tr>
@@ -62,7 +62,7 @@ const telescopeData = computed(() => {
         </tbody>
       </v-table>
     </v-row>
-    <v-row class="mt-7 ml-2" v-if="filtersStore.telescopes">
+    <v-row class="mt-7 ml-2" v-if="filtersStore.telescopes && instrumentData.operation_modes">
       <v-table style="width:1150px;">
         <thead>
           <tr>
