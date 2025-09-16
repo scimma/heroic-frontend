@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { useFiltersStore } from '@/stores/filters'
-
+import StatusTimeline from '@/components/StatusTimeline.vue';
 
 const filtersStore = useFiltersStore()
 
@@ -80,6 +80,9 @@ const telescopeData = computed(() => {
           </tr>
         </tbody>
       </v-table>
+    </v-row>
+    <v-row class="ml-2 mt-6">
+      <status-timeline api-endpoint="instrument-capabilities" :telescope="telescopeData.id || ''" :instrument="route.params.id"></status-timeline>
     </v-row>
   </v-container>
 </template>

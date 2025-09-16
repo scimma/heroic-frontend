@@ -38,6 +38,7 @@ async function fetchApiCall({ url, method, body = null, header, signal = null, c
     // ok response but empty content
     if (response.ok && (!response.headers.has('content-length') || response.headers.get('content-length') == 0)) {
       successCallback ? successCallback(null) : null
+      return response
     } else {
       const responseData = await response.json()
       if (!response.ok) {
@@ -50,6 +51,7 @@ async function fetchApiCall({ url, method, body = null, header, signal = null, c
     }
   } catch (error) {
     failCallback ? failCallback(error) : null
+    return null
   }
 }
   
@@ -59,4 +61,8 @@ const handleError = (response) => {
   console.error('API call failed with error:', error)
 }
 
-export { fetchApiCall, handleError }
+const capitalize = (str) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export { fetchApiCall, handleError, capitalize }

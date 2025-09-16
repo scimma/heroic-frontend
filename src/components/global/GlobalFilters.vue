@@ -7,7 +7,7 @@ import TelescopeSelect from './TelescopeSelect.vue'
 import { watchDebounced } from '@vueuse/core';
 
 const drawer = ref(true)
-const rail = ref(true)
+const rail = ref(false)
 const searchTargetErrors = ref();
 const searchTargetSuccess = ref();
 const filtersStore = useFiltersStore()
@@ -177,7 +177,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
   if (dateClass.value == 'fields-complete' && targetClass.value == 'fields-complete') {
     filtersStore.queryVisibilityAndAirmass();
   }
-}, { debounce: 500, deep: true, immediate: true })
+}, { debounce: 500, deep: true})
 
 
 </script>
@@ -187,14 +187,14 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
     v-model="drawer"
     :rail="rail"
     :location="$vuetify.display.mobile ? 'bottom' : undefined"
-    width="512"
+    width="504"
     permanent
     @click="rail = false"
   >
     <v-list-item variant="outlined" nav>
       <v-list-item-title>
         <v-row>
-          <v-col cols="3" style="font-size:1.2rem;">Filters</v-col>
+          <v-col cols="3" style="font-size:1.2rem;">{{ rail ? '': 'Filters' }}</v-col>
           <v-col cols="3" offset="1" style="min-height: 44px;" v-if="!rail">
             Visibility:
             <v-progress-circular v-if="filtersStore.loadingVisibility" class="ml-1" color="primary" size="18" indeterminate></v-progress-circular>
@@ -213,7 +213,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
       </v-list-item-title>
       <template v-slot:append>
         <v-btn
-          class="menu-chevron"
+          :class="rail ? 'menu-chevron-collapsed': 'menu-chevron'"
           :icon="rail ? 'mdi-chevron-right': 'mdi-chevron-left'"
           variant="text"
           @click.stop="rail = !rail"
@@ -547,6 +547,20 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
             :step="1"
           >
           </v-number-input>
+          <v-switch
+            label="Filter out Past Unavailability"
+            v-model="filtersStore.queryParams.base.include_status"
+            density="comfortable"
+            style="height: 44px;"
+            color="secondary">
+          </v-switch>
+          <v-switch
+            label="Filter out Future Unavailability"
+            v-model="filtersStore.queryParams.base.include_planned_status"
+            density="comfortable"
+            style="height: 44px;"
+            color="secondary">
+          </v-switch>
         </v-expansion-panel-text>
       </v-expansion-panel>
       <v-expansion-panel>
@@ -561,7 +575,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
           </v-row>        
         </v-expansion-panel-title>
         <v-expansion-panel-text class="filter-panel">
-          <telescope-select></telescope-select>
+          <telescope-select class="mt-6" v-model="filtersStore.queryParams.base.telescopes" :include-tooltip="true"></telescope-select>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -569,8 +583,12 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
 </template>
 <style scoped>
 
+.menu-chevron-collapsed {
+  left: -45px;
+}
+
 .menu-chevron {
-  left: -6px;
+  left: -4px;
 }
 
 .fields-complete {

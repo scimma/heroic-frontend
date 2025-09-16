@@ -50,6 +50,16 @@ const router = createRouter({
         title: 'Telescope Detail'
       }
     },
+    {
+      path: "/planning",
+      name: "planning",
+      component: () => import("../views/PlanningView.vue"),
+    },
+    {
+      path: "/planning-management",
+      name: "planning-management",
+      component: () => import("../views/PlanningManagementView.vue"),
+    },
   ],
 });
 

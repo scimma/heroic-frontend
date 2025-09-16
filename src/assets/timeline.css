@@ -1,0 +1,62 @@
+.vis-time-axis .vis-text {
+  color: #b3b3b3 !important;
+}
+
+.vis-labelset .vis-label {
+  color: #b3b3b3 !important;
+}
+
+.vis-item.VISIBLE {
+  background-color: rgb(185, 115, 234);
+  border-color: rgb(167, 71, 234);
+}
+
+.vis-item.AVAILABLE {
+  background-color: cyan;
+  border-color: cyan;
+}
+
+.vis-item.UNAVAILABLE {
+  background-color: coral;
+  border-color: coral;
+}
+
+.vis-item.SCHEDULABLE {
+  background-color: lightgreen;
+  border-color: lightgreen;
+}
+
+.vis-item.sun-up {
+  background-color: lightyellow !important;
+}
+
+.info-button {
+  left:-10px;
+  top: -10px;
+}
+
+.add-button {
+  position: relative;
+  bottom: 50px;
+  left: 12px;
+}
+
+.datepicker-label {
+  z-index: 2;
+  position:relative;
+  font-size:small;
+  top: 10px;
+  left: 8px;
+  background-color: var(--vt-c-black);
+}
+
+.vis-delete {
+  display: flex;
+  align-items: center;
+  border-radius: 25px;
+  right: -26px;
+}
+
+.vis-timeline {
+  overflow:visible !important;
+}
