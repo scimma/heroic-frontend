@@ -168,7 +168,7 @@ onMounted(async () => {
 }
 
 .navbar-item {
-  width: 200px;
+  width: 180px;
   text-align:center;
 }
 
