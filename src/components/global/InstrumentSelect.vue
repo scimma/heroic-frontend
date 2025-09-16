@@ -23,69 +23,83 @@ const props = defineProps({
 
 const tooltip = computed(() => {
   if (props.includeTooltip) {
-    return 'Optional filter on Telescopes';
+    return 'Optional filter on Instruments';
   }
   return null;
 })
 
-const telescopesByObservatory = computed(() => {
+const instrumentsByObservatory = computed(() => {
   if (filtersStore.telescopes){
-    let telescopes = {};
+    let instruments = {};
     Object.values(filtersStore.telescopes).forEach(telescope => {
       if (!props.observatoryFilter || props.observatoryFilter.includes(telescope.observatory)) {
         let observatory = telescope.observatory + ': ' + telescope.observatory_name;
         let site = telescope.id.split('.')[1] + ': ' + telescope.site_name;
-        if (!(observatory in telescopes)){
-          telescopes[observatory] = {};
+        if (!(observatory in instruments)){
+          instruments[observatory] = {};
         }
-        if (!(site in telescopes[observatory])) {
-          telescopes[observatory][site] = [];
+        if (!(site in instruments[observatory])) {
+          instruments[observatory][site] = {};
         }
-        telescopes[observatory][site].push({
-          'id': telescope.id,
-          'telescope': telescope.id.split('.')[2],
-          'name': telescope.name,
-          'site': telescope.site,
-          'observatory': observatory
+        telescope.instruments.forEach(instrument => {
+          let tel_id = telescope.id.split('.')[2] + ': ' + telescope.name;
+          if (!(tel_id in instruments[observatory][site])) {
+            instruments[observatory][site][tel_id] = []
+          }
+          instruments[observatory][site][tel_id].push({
+            'id': instrument.id,
+            'instrument': instrument.id.split('.')[3],
+            'name': instrument.name,
+            'telescope': telescope.id.split('.')[2],
+            'site': telescope.site,
+            'observatory': telescope.observatory
+          })
         })
       }
     })
-    return telescopes;
+    return instruments;
   }
-  return [];
+  return {};
 })
 
-const telescopeOptions = computed(() => {
-  const telescopes = telescopesByObservatory.value;
-  let telescopeItems = [];
-  for (const [observatory, sites] of Object.entries(telescopes)) {
-    telescopeItems.push({
+const instrumentOptions = computed(() => {
+  const instruments = instrumentsByObservatory.value;
+  let instrumentItems = [];
+  for (const [observatory, sites] of Object.entries(instruments)) {
+    instrumentItems.push({
       props: {observatory: observatory}
     });
     for (const [site, telescopes] of Object.entries(sites)) {
-      telescopeItems.push({
+      instrumentItems.push({
         props: {site: site}
       });
-      telescopeItems.push(...telescopes);
-      telescopeItems.push({
+      for (const [telescope, instruments] of Object.entries(telescopes)) {
+        instrumentItems.push({
+          props: {telescope: telescope}
+        });
+        instrumentItems.push(...instruments);
+      }
+      instrumentItems.push({
         props: { divider: true}
       });
     }
   }
-  return telescopeItems;
+  return instrumentItems;
 })
 
 const indeterminateStates = computed(() => {
   let states = {};
-  const telescopes = telescopesByObservatory.value;
-  for (const observatory of Object.keys(telescopes)) {
+  const instruments = instrumentsByObservatory.value;
+  for (const observatory of Object.keys(instruments)) {
     let numSelected = 0;
     let totalNum = 0;
-    for (const site of Object.values(telescopes[observatory])) {
-      for (const telescope of site) {
-        totalNum += 1;
-        if (model.value && model.value.includes(telescope.id)) {
-          numSelected += 1;
+    for (const site of Object.values(instruments[observatory])) {
+      for (const telescope of Object.values(instruments[observatory][site])) {
+        for (const instrument of telescope) {
+          totalNum += 1;
+          if (model.value && model.value.includes(instrument.id)) {
+            numSelected += 1;
+          }
         }
       }
     }
@@ -100,20 +114,22 @@ const indeterminateStates = computed(() => {
 })
 
 async function selectAllObservatory(selected, observatory) {
-  const telescopes = telescopesByObservatory.value;
-  if (telescopes[observatory]) {
+  const instruments = instrumentsByObservatory.value;
+  if (instruments[observatory]) {
     if (model.value == null) {
       model.value = [];
       await nextTick();
     }
-    for (const site of Object.values(telescopes[observatory])) {
-      for (const telescope of site) {
-        let index = model.value.indexOf(telescope.id);
-        if (selected && index == -1) {
-          model.value.push(telescope.id);
-        }
-        else if (!selected && index > -1) {
-          model.value.splice(index, 1);
+    for (const site of Object.values(instruments[observatory])) {
+      for (const telescope of Object.values(instruments[observatory][site])) {
+        for (const instrument of telescope) {
+          let index = model.value.indexOf(instrument.id);
+          if (selected && index == -1) {
+            model.value.push(instrument.id);
+          }
+          else if (!selected && index > -1) {
+            model.value.splice(index, 1);
+          }
         }
       }
     }
@@ -129,10 +145,10 @@ async function selectAllObservatory(selected, observatory) {
   <v-select
     variant="outlined"
     v-model="model"
-    :items="telescopeOptions"
+    :items="instrumentOptions"
     item-value="id"
-    item-title="telescope"
-    label="Telescopes"
+    item-title="instrument"
+    label="Instruments"
     v-tooltip:top="tooltip"
     :chips="props.multiple"
     closable-chips
@@ -155,6 +171,9 @@ async function selectAllObservatory(selected, observatory) {
       </v-list-subheader>
       <v-list-subheader v-else-if="data.props.site">
         {{ data.props.site }}
+      </v-list-subheader>
+      <v-list-subheader v-else-if="data.props.telescope">
+        {{ data.props.telescope }}
       </v-list-subheader>
       <v-divider v-else-if="data.props.divider" />
       <v-list-item v-else v-bind="data.props" class="pl-6">

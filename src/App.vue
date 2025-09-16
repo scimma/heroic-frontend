@@ -18,6 +18,7 @@ onMounted(async () => {
         site.telescopes.forEach(telescope => {
           telescopes[telescope.id] = telescope;
           telescopes[telescope.id]['observatory_name'] = observatory.name;
+          telescopes[telescope.id]['observatory'] = observatory.id;
           telescopes[telescope.id]['site_name'] = site.name;
           telescopes[telescope.id]['weather_url'] = site.weather_url;
           telescopes[telescope.id]['elevation'] = site.elevation;

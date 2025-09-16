@@ -3,22 +3,33 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { fetchApiCall } from '@/utils/api'
 import { useFiltersStore } from '@/stores/filters'
 import { DataSet, Timeline } from 'vis-timeline/standalone';
+import StatusTimelineLegend from '@/components/global/StatusTimelineLegend.vue';
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
-
+import "@/assets/timeline.css"
 
 const props = defineProps({
+  apiEndpoint: {
+    type: String,
+    required: true
+  },
   telescope: {
     type: String,
     required: true
+  },
+  instrument: {
+    type: String,
+    required: false
   }
 })
 
 const ONEDAY = 3600 * 1000 * 24;
 const filtersStore = useFiltersStore()
 const timelineDiv = ref(null);
-const telescopeStatuses = ref([]);
+const historicalItems = ref([]);
+const plannedItems = ref([]);
 const telescopeDarkIntervals = ref({});
 var timeline = null;
+
 const options = {
   groupOrder: 'id',
   stack: false,
@@ -30,12 +41,22 @@ const options = {
   selectable: false,
   zoomKey: 'ctrlKey',
   tooltip: {
-    overflowMethod: 'cap'
+    overflowMethod: 'flip'
   }
 };
 
-function statusTooltip(status) {
-  return '<h4>' + status.status + '</h4><br><p>' + (status.reason || '') + '</p>';
+function toTooltip(item) {
+  let tooltip = '<h4>' + item.status + '</h4>';
+  if (item.reason) {
+    tooltip += '<br /><p>' + item.reason + '</p>';
+  }
+  if (item.optical_element_groups && Object.keys(item.optical_element_groups).length != 0) {
+    tooltip += '<br /><pre>' + (JSON.stringify(item.optical_element_groups, null, 2) || '') + '</pre>';
+  }
+  if (item.operation_modes && Object.keys(item.operation_modes).length != 0) {
+    tooltip += '<br /><pre>' + (JSON.stringify(item.operation_modes, null, 2) || '') + '</pre>';
+  }
+  return tooltip;
 }
 
 const start = computed(() => {
@@ -56,17 +77,17 @@ const endPlusOne = computed(() => {
 
 const timelineData = computed(() => {
   let visData = new DataSet();
-  if (telescopeStatuses.value) {
-    var lastStatus;
+  if (historicalItems.value) {
+    var lastItem;
     // Statues are in a list ordered by soonest first
-    telescopeStatuses.value.forEach(status => {
-      if (lastStatus) {
+    historicalItems.value.forEach(item => {
+      if (lastItem) {
         visData.add({
           group: 'status',
-          start: status.date,
-          end: lastStatus.date,
-          className: status.status,
-          title: statusTooltip(status),
+          start: item.date,
+          end: lastItem.date,
+          className: item.status,
+          title: toTooltip(item),
           toggle: 'tooltip',
           html: true,
           type: 'range'
@@ -75,16 +96,36 @@ const timelineData = computed(() => {
       else {
         visData.add({
           group: 'status',
-          start: status.date,
+          start: item.date,
           end: end.value,
-          className: status.status,
-          title: statusTooltip(status),
+          className: item.status,
+          title: toTooltip(item),
           toggle: 'tooltip',
           html: true,
           type: 'range'
         });
       }
-      lastStatus = status;
+      lastItem = item;
+    })
+  }
+  // Layer the planned future items over the top of the last current item
+  if (plannedItems.value) {
+    // Planned statues are in a list ordered by soonest first
+    plannedItems.value.forEach(item => {
+      let capped_start = new Date(item.start);
+      if (capped_start < new Date()) {
+        capped_start = new Date();
+      }
+      visData.add({
+        group: 'status',
+        start: capped_start.toISOString(),
+        end: item.end,
+        className: item.status,
+        title: toTooltip(item),
+        toggle: 'tooltip',
+        html: true,
+        type: 'range'
+      });
     })
   }
   if (telescopeDarkIntervals.value && telescopeDarkIntervals.value[props.telescope]) {
@@ -128,10 +169,10 @@ const timelineData = computed(() => {
 
 const timelineGroups = computed(() => {
   let plotGroups = new DataSet();
-  if (telescopeStatuses.value){
+  if (historicalItems.value || plannedItems.value){
     plotGroups.add({
       id: 'status',
-      content: 'Status',
+      content: props.instrument ? 'Instrument Status': 'Telescope Status',
       title: 'status'
     });
   }
@@ -145,11 +186,31 @@ const timelineGroups = computed(() => {
   return plotGroups;
 })
 
-async function loadTelescopeStatus () {
-  const url = import.meta.env.VITE_HEROIC_URL + 'api/telescope-statuses' + '/?limit=1000&telescope=' + props.telescope + '&start=' + start.value + '&end=' + end.value;
+async function loadHistoricalAPIItems () {
+  let url = import.meta.env.VITE_HEROIC_URL + 'api/' + props.apiEndpoint + '/?limit=1000&telescope=' + props.telescope + '&start=' + start.value + '&end=' + end.value;
+  if (props.instrument) {
+    url += '&instrument=' + props.instrument;
+  }
   await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
-    telescopeStatuses.value = data.results;
+    historicalItems.value = data.results;
   }})
+}
+
+async function loadPlannedAPIItems () {
+  // Planned future items is only valid in the future, so cap query from now
+  if (new Date(end.value) > new Date()) {
+    let capped_start = new Date(start.value);
+    if (capped_start < new Date()) {
+      capped_start = new Date();
+    }
+    let url = import.meta.env.VITE_HEROIC_URL + 'api/planned-' + props.apiEndpoint + '/?limit=1000&telescope=' + props.telescope + '&end_after=' + capped_start.toISOString() + '&start_before=' + end.value;
+    if (props.instrument) {
+      url += '&instrument=' + props.instrument;
+    }
+    await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+      plannedItems.value = data.results;
+    }})
+  }
 }
 
 async function loadTelescopeDarkIntervals () {
@@ -167,55 +228,32 @@ onMounted(async () => {
   timelineSetup();
 })
 
-watch(() => filtersStore.$state.visibilityResults, async () => {
-  await loadTelescopeStatus();
-  await loadTelescopeDarkIntervals();
-  timeline.setGroups(new DataSet([]));
-  timeline.setItems(new DataSet([]));
-  timeline.setGroups(timelineGroups.value);
-  timeline.setItems(timelineData.value);
-  timeline.setWindow(start.value, end.value);
-}, {immediate: true})
-
-watch(() => filtersStore.$state.visibilityErrors, async () => {
-  if (Object.keys(filtersStore.$state.visibilityErrors).length > 0){
-    await loadTelescopeStatus();
+watch([() => filtersStore.queryParams.base.start, () => filtersStore.queryParams.base.end, () => props.telescope, () => props.instrument], async () => {
+  // When start/end date is changed or prop telescope is changed, reload telescope status
+  if (props.telescope) {
+    await loadHistoricalAPIItems();
+    await loadPlannedAPIItems();
     await loadTelescopeDarkIntervals();
     timeline.setGroups(new DataSet([]));
     timeline.setItems(new DataSet([]));
     timeline.setGroups(timelineGroups.value);
     timeline.setItems(timelineData.value);
+    timeline.setWindow(start.value, end.value);
   }
+}, {immediate: true})
+
+watch([() => filtersStore.$state.visibilityErrors, () => filtersStore.$state.visibilityResults], async () => {
+  timeline.setGroups(new DataSet([]));
+  timeline.setItems(new DataSet([]));
+  timeline.setGroups(timelineGroups.value);
+  timeline.setItems(timelineData.value);
+  timeline.setWindow(start.value, end.value);
 })
 
 </script>
 <template>
   <div ref="timelineDiv"></div>
+  <status-timeline-legend :include-visibility="true" :include-sun="true" max-width="1160px" style="width: 100%"></status-timeline-legend>
 </template>
 <style>
-.vis-time-axis .vis-text {
-  color: #b3b3b3 !important;
-}
-.vis-labelset .vis-label {
-  color: #b3b3b3 !important;
-}
-.vis-item.VISIBLE {
-  background-color: rgb(185, 115, 234);
-  border-color: rgb(167, 71, 234);
-}
-.vis-item.AVAILABLE {
-  background-color: lightblue;
-  border-color: lightblue;
-}
-.vis-item.UNAVAILABLE {
-  background-color: lightcoral;
-  border-color: lightcoral;
-}
-.vis-item.SCHEDULABLE {
-  background-color: lightgreen;
-  border-color: lightgreen;
-}
-.vis-item.sun-up {
-  background-color: lightyellow !important;
-}
 </style>

@@ -6,16 +6,18 @@ export const useFiltersStore = defineStore("filters", {
     return {
       queryParams: {
         base: {
-          start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-          end: new Date().toISOString(), // Now
-          telescopes: ['ligo.hanford.h1', 'ligo.livingston.l1', 'virgo.cascina.v1', 'kagra.kamioka.k1'], // All GW detectors
+          start: null,
+          end: null,
+          telescopes: null,
           max_airmass: 2.0,
           min_lunar_distance: 0.0,
           max_lunar_phase: 1.0,
+          include_status: false,
+          include_planned_status: true
         },
         siderealTarget: {
-          ra: 197.450375, // NGC 4993 (host of GW170817)
-          dec: -23.38148,  // NGC 4993 (host of GW170817)
+          ra: null,
+          dec: null,
           proper_motion_ra: null,
           proper_motion_dec: null,
           epoch: 2000.0,
@@ -37,7 +39,7 @@ export const useFiltersStore = defineStore("filters", {
       },
       telescopes: null,
       filteredTelescopes: [],
-      targetName: 'NGC 4993',  // Default to NGC 4993 (GW170817 host)
+      targetName: null,
       targetType: 'SIDEREAL',
       nonSiderealType: null,
       visibilityAbort: null,

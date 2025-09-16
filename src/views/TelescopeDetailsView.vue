@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { useFiltersStore } from '@/stores/filters'
-import TelescopeStatusTimeline from '@/components/TelescopeStatusTimeline.vue'
+import StatusTimeline from '@/components/StatusTimeline.vue';
 
 const filtersStore = useFiltersStore()
 
@@ -109,11 +109,8 @@ function generateItemLink(item) {
         </v-row>
       </v-col>
     </v-row>
-    <v-row>
-      <telescope-status-timeline
-        :telescope="route.params.id"
-        class="pt-4 pl-4"
-      ></telescope-status-timeline>
+    <v-row class="ml-2 mt-6">
+      <status-timeline api-endpoint="telescope-statuses" :telescope="route.params.id"></status-timeline>
     </v-row>
   </v-container>
 </template>

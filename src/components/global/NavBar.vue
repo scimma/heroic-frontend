@@ -1,11 +1,15 @@
 <script setup>
-import { onMounted, ref} from 'vue';
+import { onMounted, ref, computed} from 'vue';
 import { RouterLink } from 'vue-router'
 import { useUserStore } from '@/stores/user';
 import { fetchApiCall } from '@/utils/api'
 
 const userStore = useUserStore()
 const revokeTokenDialog = ref(false);
+
+const userManagesObservatories = computed(() => {
+  return userStore.loggedIn && userStore.profile && userStore.profile.managed_observatories;
+})
 
 function login() {
   // Login is a multi-step process through Hop-admin, so set a flag here so we know we are in the middle of a login process
@@ -96,11 +100,19 @@ onMounted(async () => {
         Instruments
       </router-link>
       <router-link
-        to="/about"
+        to="/planning"
         class="navbar-item"
       >
-        <v-icon class="pr-2 pb-1" icon="mdi-help" size="small"></v-icon>
-        About
+        <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
+        Planning
+      </router-link>
+      <router-link
+        v-if="userManagesObservatories"
+        to="/planning-management"
+        class="navbar-item"
+      >
+        <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
+        Planning Management
       </router-link>
       <v-menu>
         <template v-slot:activator="{ props }">
