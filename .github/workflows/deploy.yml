@@ -1,0 +1,245 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - development
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set deployment environment
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "SSH_HOST=${{ secrets.PROD_SSH_HOST }}" >> $GITHUB_OUTPUT
+            echo "SSH_USER=${{ secrets.PROD_SSH_USER }}" >> $GITHUB_OUTPUT
+            echo "SSH_KEY=${{ secrets.PROD_SSH_KEY }}" >> $GITHUB_OUTPUT
+            echo "ENV_FILE=${{ secrets.PROD_LOCAL_ENV_FILE }}" >> $GITHUB_OUTPUT
+            echo "DEPLOY_PATH=/home/exouser/heroic-frontend" >> $GITHUB_OUTPUT
+            echo "BACKUP_PATH=/home/exouser/backups/frontend" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+            echo "SSH_HOST=${{ secrets.DEV_SSH_HOST }}" >> $GITHUB_OUTPUT
+            echo "SSH_USER=${{ secrets.DEV_SSH_USER }}" >> $GITHUB_OUTPUT
+            echo "SSH_KEY=${{ secrets.DEV_SSH_KEY }}" >> $GITHUB_OUTPUT
+            echo "ENV_FILE=${{ secrets.DEV_LOCAL_ENV_FILE }}" >> $GITHUB_OUTPUT
+            echo "DEPLOY_PATH=/home/exouser/heroic-frontend" >> $GITHUB_OUTPUT
+            echo "BACKUP_PATH=/home/exouser/backups/frontend" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ steps.set-env.outputs.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ steps.set-env.outputs.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create backup before deployment
+        id: backup
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ steps.set-env.outputs.SSH_USER }}@${{ steps.set-env.outputs.SSH_HOST }} << 'ENDSSH'
+            set -e
+
+            echo "================================================"
+            echo "CREATING BACKUP"
+            echo "================================================"
+
+            # Create backup directory
+            mkdir -p ${{ steps.set-env.outputs.BACKUP_PATH }}
+
+            cd ${{ steps.set-env.outputs.DEPLOY_PATH }}
+
+            # Create timestamped backup name
+            BACKUP_NAME="backup_$(date +%Y%m%d_%H%M%S)"
+            echo "Creating backup: $BACKUP_NAME"
+
+            # Save current git commit
+            echo "Saving git commit hash..."
+            git rev-parse HEAD > "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_commit.txt"
+
+            # Save current docker image ID
+            echo "Saving docker image ID..."
+            docker compose images -q frontend > "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_image.txt" 2>/dev/null || echo "No image" > "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_image.txt"
+
+            # Save backup name for potential rollback
+            echo "$BACKUP_NAME" > "${{ steps.set-env.outputs.BACKUP_PATH }}/LATEST_BACKUP.txt"
+
+            echo "✅ Backup created: $BACKUP_NAME"
+            echo "   Location: ${{ steps.set-env.outputs.BACKUP_PATH }}/"
+
+            # Keep only last 10 backups
+            echo "🧹 Cleaning old backups (keeping last 10)..."
+            cd ${{ steps.set-env.outputs.BACKUP_PATH }}
+            ls -t backup_*_commit.txt 2>/dev/null | tail -n +11 | while read file; do
+              BASE_NAME="${file%_commit.txt}"
+              rm -f "${BASE_NAME}_commit.txt" "${BASE_NAME}_image.txt"
+              echo "   Removed: $BASE_NAME"
+            done
+
+            echo "================================================"
+          ENDSSH
+
+      - name: Deploy Frontend to server
+        id: deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ steps.set-env.outputs.SSH_USER }}@${{ steps.set-env.outputs.SSH_HOST }} << 'ENDSSH'
+            set -e
+
+            echo "================================================"
+            echo "FRONTEND DEPLOYMENT - ${{ steps.set-env.outputs.ENVIRONMENT }}"
+            echo "================================================"
+            
+            # Navigate to frontend directory
+            cd ${{ steps.set-env.outputs.DEPLOY_PATH }}
+
+            echo ""
+            echo "1. Pulling latest frontend code from ${{ github.ref_name }}..."
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+            echo "✅ Code updated to commit: $(git rev-parse --short HEAD)"
+
+            echo ""
+            echo "2. Updating frontend environment variables..."
+            cat > .local.env << 'EOF'
+          ${{ steps.set-env.outputs.ENV_FILE }}
+          EOF
+            echo "✅ Environment updated"
+
+            echo ""
+            echo "3. Stopping frontend services..."
+            docker compose down
+            echo "✅ Frontend stopped"
+
+            echo ""
+            echo "4. Building and starting frontend services..."
+            docker compose build --no-cache frontend
+            docker compose up -d
+            echo "✅ Frontend started"
+
+            echo ""
+            echo "5. Waiting for frontend to be ready..."
+            sleep 10
+
+            # Check if frontend is actually running
+            if ! docker compose ps | grep -q "frontend.*Up"; then
+              echo "❌ Frontend container failed to start!"
+              docker compose ps
+              docker compose logs --tail=50 frontend
+              exit 1
+            fi
+
+            echo ""
+            echo "================================================"
+            echo "DEPLOYMENT STATUS"
+            echo "================================================"
+            echo ""
+            docker compose ps
+            echo ""
+            echo "✅ FRONTEND DEPLOYMENT COMPLETE!"
+            echo "================================================"
+          ENDSSH
+
+      - name: Health Check
+        id: health_check
+        if: success()
+        run: |
+          echo "Running health checks..."
+
+          # Determine the URL based on environment
+          if [[ "${{ steps.set-env.outputs.ENVIRONMENT }}" == "production" ]]; then
+            URL="https://heroic.scimma.org"
+          else
+            URL="https://dev.heroic.scimma.org"
+          fi
+
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            # Check if site is accessible
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            
+            if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "302" ]]; then
+              echo "✅ Health check passed! Site returned HTTP $HTTP_CODE"
+              exit 0
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Attempt $RETRY_COUNT/$MAX_RETRIES: HTTP $HTTP_CODE - retrying in 5s..."
+            sleep 5
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          echo "Last HTTP code: $HTTP_CODE"
+          exit 1
+
+      - name: Rollback on Failure
+        if: failure() && (steps.deploy.conclusion == 'failure' || steps.health_check.conclusion == 'failure')
+        run: |
+          echo "================================================"
+          echo "  INITIATING ROLLBACK"
+          echo "================================================"
+
+          ssh -i ~/.ssh/deploy_key ${{ steps.set-env.outputs.SSH_USER }}@${{ steps.set-env.outputs.SSH_HOST }} << 'ENDSSH'
+            set -e
+
+            # Get the latest backup name
+            BACKUP_NAME=$(cat ${{ steps.set-env.outputs.BACKUP_PATH }}/LATEST_BACKUP.txt 2>/dev/null || echo "")
+
+            if [ -z "$BACKUP_NAME" ]; then
+              echo "❌ No backup found to rollback to!"
+              exit 1
+            fi
+
+            echo "Rolling back to backup: $BACKUP_NAME"
+
+            # Get commit hash from backup
+            COMMIT_HASH=$(cat "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_commit.txt")
+            echo "   Commit: $COMMIT_HASH"
+
+            cd ${{ steps.set-env.outputs.DEPLOY_PATH }}
+
+            echo ""
+            echo "Stopping frontend..."
+            docker compose down
+
+            echo "Restoring code to commit: $COMMIT_HASH"
+            git checkout $COMMIT_HASH
+
+            echo "Starting frontend..."
+            docker compose build --no-cache frontend
+            docker compose up -d
+            sleep 10
+
+            echo ""
+            echo "✅ ROLLBACK COMPLETE!"
+            echo "   Restored to: $BACKUP_NAME"
+            echo "   Commit: $COMMIT_HASH"
+            echo ""
+            echo "Current status:"
+            docker compose ps
+          ENDSSH
+
+          echo "================================================"
+          echo "⚠️  DEPLOYMENT FAILED - SYSTEM ROLLED BACK"
+          echo "================================================"
+
+      - name: Deployment notification
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Successfully deployed frontend to ${{ steps.set-env.outputs.ENVIRONMENT }}"
+          else
+            echo "❌ Frontend deployment to ${{ steps.set-env.outputs.ENVIRONMENT }} failed"
+            echo "🔄 Automatic rollback was attempted"
+            exit 1
+          fi
