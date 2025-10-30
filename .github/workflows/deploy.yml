@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - development
-      - main
+    tags:
+      - 'v*.*.*'
 
 jobs:
   deploy:
@@ -17,7 +18,8 @@ jobs:
       - name: Set deployment environment
         id: set-env
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # Check if this is a tag push (production) or branch push (development)
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
             echo "SSH_HOST=${{ secrets.PROD_SSH_HOST }}" >> $GITHUB_OUTPUT
             echo "SSH_USER=${{ secrets.PROD_SSH_USER }}" >> $GITHUB_OUTPUT
@@ -25,6 +27,7 @@ jobs:
             echo "ENV_FILE=${{ secrets.PROD_LOCAL_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "DEPLOY_PATH=/home/exouser/heroic-frontend" >> $GITHUB_OUTPUT
             echo "BACKUP_PATH=/home/exouser/backups/frontend" >> $GITHUB_OUTPUT
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
             echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
             echo "SSH_HOST=${{ secrets.DEV_SSH_HOST }}" >> $GITHUB_OUTPUT
@@ -33,12 +36,15 @@ jobs:
             echo "ENV_FILE=${{ secrets.DEV_LOCAL_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "DEPLOY_PATH=/home/exouser/heroic-frontend" >> $GITHUB_OUTPUT
             echo "BACKUP_PATH=/home/exouser/backups/frontend" >> $GITHUB_OUTPUT
+            echo "VERSION=dev-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ steps.set-env.outputs.SSH_KEY }}" > ~/.ssh/deploy_key
+          cat > ~/.ssh/deploy_key << 'EOFKEY'
+          ${{ steps.set-env.outputs.SSH_KEY }}
+          EOFKEY
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ steps.set-env.outputs.SSH_HOST }} >> ~/.ssh/known_hosts
 
@@ -49,7 +55,7 @@ jobs:
             set -e
 
             echo "================================================"
-            echo "CREATING BACKUP"
+            echo " CREATING BACKUP"
             echo "================================================"
 
             # Create backup directory
@@ -60,6 +66,13 @@ jobs:
             # Create timestamped backup name
             BACKUP_NAME="backup_$(date +%Y%m%d_%H%M%S)"
             echo "Creating backup: $BACKUP_NAME"
+
+            # Save current version/tag if it exists
+            if [ -f ".deployed_version" ]; then
+              CURRENT_VERSION=$(cat .deployed_version)
+              echo "Current deployed version: $CURRENT_VERSION"
+              echo "$CURRENT_VERSION" > "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_version.txt"
+            fi
 
             # Save current git commit
             echo "Saving git commit hash..."
@@ -76,14 +89,14 @@ jobs:
             echo "   Location: ${{ steps.set-env.outputs.BACKUP_PATH }}/"
 
             # Keep only last 10 backups
-            echo "🧹 Cleaning old backups (keeping last 10)..."
+            echo "Cleaning old backups (keeping last 10)..."
             cd ${{ steps.set-env.outputs.BACKUP_PATH }}
             ls -t backup_*_commit.txt 2>/dev/null | tail -n +11 | while read file; do
               BASE_NAME="${file%_commit.txt}"
-              rm -f "${BASE_NAME}_commit.txt" "${BASE_NAME}_image.txt"
+              rm -f "${BASE_NAME}_commit.txt" "${BASE_NAME}_image.txt" "${BASE_NAME}_version.txt"
               echo "   Removed: $BASE_NAME"
             done
-
+            
             echo "================================================"
           ENDSSH
 
@@ -94,24 +107,37 @@ jobs:
             set -e
 
             echo "================================================"
-            echo "FRONTEND DEPLOYMENT - ${{ steps.set-env.outputs.ENVIRONMENT }}"
+            echo " FRONTEND DEPLOYMENT - ${{ steps.set-env.outputs.ENVIRONMENT }}"
+            echo " VERSION: ${{ steps.set-env.outputs.VERSION }}"
             echo "================================================"
-            
+
             # Navigate to frontend directory
             cd ${{ steps.set-env.outputs.DEPLOY_PATH }}
 
             echo ""
-            echo "1. Pulling latest frontend code from ${{ github.ref_name }}..."
-            git fetch origin
-            git checkout ${{ github.ref_name }}
-            git pull origin ${{ github.ref_name }}
-            echo "✅ Code updated to commit: $(git rev-parse --short HEAD)"
+            echo "1. Pulling latest frontend code..."
+            git fetch origin --tags
+
+            # For production (tag), checkout the specific tag
+            # For development, checkout development branch
+            if [[ "${{ steps.set-env.outputs.ENVIRONMENT }}" == "production" ]]; then
+              git checkout ${{ steps.set-env.outputs.VERSION }}
+              echo "✅ Code updated to version: ${{ steps.set-env.outputs.VERSION }}"
+            else
+              git checkout development
+              git pull origin development
+              echo "✅ Code updated to commit: $(git rev-parse --short HEAD)"
+            fi
+
+            # Save deployed version
+            echo "${{ steps.set-env.outputs.VERSION }}" > .deployed_version
 
             echo ""
             echo "2. Updating frontend environment variables..."
-            cat > .local.env << 'EOF'
-          ${{ steps.set-env.outputs.ENV_FILE }}
-          EOF
+            # Use heredoc to securely write environment file
+            cat > .local.env << 'EOFENV'
+            ${{ steps.set-env.outputs.ENV_FILE }}
+            EOFENV
             echo "✅ Environment updated"
 
             echo ""
@@ -128,7 +154,7 @@ jobs:
             echo ""
             echo "5. Waiting for frontend to be ready..."
             sleep 10
-
+            
             # Check if frontend is actually running
             if ! docker compose ps | grep -q "frontend.*Up"; then
               echo "❌ Frontend container failed to start!"
@@ -139,8 +165,10 @@ jobs:
 
             echo ""
             echo "================================================"
-            echo "DEPLOYMENT STATUS"
+            echo " DEPLOYMENT STATUS"
             echo "================================================"
+            echo ""
+            echo "Deployed Version: ${{ steps.set-env.outputs.VERSION }}"
             echo ""
             docker compose ps
             echo ""
@@ -174,7 +202,7 @@ jobs:
             fi
 
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Attempt $RETRY_COUNT/$MAX_RETRIES: HTTP $HTTP_CODE - retrying in 5s..."
+            echo "⏳ Attempt $RETRY_COUNT/$MAX_RETRIES: HTTP $HTTP_CODE - retrying in 5s..."
             sleep 5
           done
 
@@ -186,7 +214,7 @@ jobs:
         if: failure() && (steps.deploy.conclusion == 'failure' || steps.health_check.conclusion == 'failure')
         run: |
           echo "================================================"
-          echo "  INITIATING ROLLBACK"
+          echo " INITIATING ROLLBACK"
           echo "================================================"
 
           ssh -i ~/.ssh/deploy_key ${{ steps.set-env.outputs.SSH_USER }}@${{ steps.set-env.outputs.SSH_HOST }} << 'ENDSSH'
@@ -202,10 +230,16 @@ jobs:
 
             echo "Rolling back to backup: $BACKUP_NAME"
 
+            # Get version from backup if it exists
+            if [ -f "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_version.txt" ]; then
+              PREVIOUS_VERSION=$(cat "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_version.txt")
+              echo "   Version: $PREVIOUS_VERSION"
+            fi
+
             # Get commit hash from backup
             COMMIT_HASH=$(cat "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_commit.txt")
             echo "   Commit: $COMMIT_HASH"
-
+            
             cd ${{ steps.set-env.outputs.DEPLOY_PATH }}
 
             echo ""
@@ -214,23 +248,31 @@ jobs:
 
             echo "Restoring code to commit: $COMMIT_HASH"
             git checkout $COMMIT_HASH
+            
+            # Restore version file if it exists
+            if [ -f "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_version.txt" ]; then
+              cp "${{ steps.set-env.outputs.BACKUP_PATH }}/${BACKUP_NAME}_version.txt" .deployed_version
+            fi
 
             echo "Starting frontend..."
             docker compose build --no-cache frontend
             docker compose up -d
             sleep 10
-
+            
             echo ""
             echo "✅ ROLLBACK COMPLETE!"
             echo "   Restored to: $BACKUP_NAME"
+            if [ -n "$PREVIOUS_VERSION" ]; then
+              echo "   Version: $PREVIOUS_VERSION"
+            fi
             echo "   Commit: $COMMIT_HASH"
             echo ""
             echo "Current status:"
             docker compose ps
           ENDSSH
-
+          
           echo "================================================"
-          echo "⚠️  DEPLOYMENT FAILED - SYSTEM ROLLED BACK"
+          echo " DEPLOYMENT FAILED - SYSTEM ROLLED BACK"
           echo "================================================"
 
       - name: Deployment notification
@@ -238,8 +280,9 @@ jobs:
         run: |
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "✅ Successfully deployed frontend to ${{ steps.set-env.outputs.ENVIRONMENT }}"
+            echo "Version: ${{ steps.set-env.outputs.VERSION }}"
           else
             echo "❌ Frontend deployment to ${{ steps.set-env.outputs.ENVIRONMENT }} failed"
-            echo "🔄 Automatic rollback was attempted"
+            echo "Automatic rollback was attempted"
             exit 1
           fi
