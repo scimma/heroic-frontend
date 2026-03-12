@@ -1,0 +1,71 @@
+name: Deploy frontend to DEV
+
+on:
+  push:
+    branches:
+      - development
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          cat > ~/.ssh/id_ed25519 <<'SSHEOF'
+          ${{ secrets.DEV_SSH_KEY }}
+          SSHEOF
+          tr -d '\r' < ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.clean
+          mv ~/.ssh/id_ed25519.clean ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.DEV_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: SSH sanity check
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }} "echo SSH OK"
+
+      - name: Upload .env.local
+        run: |
+          cat > /tmp/env.local <<'ENVEOF'
+          ${{ secrets.DEV_FRONTEND_ENV }}
+          ENVEOF
+          tr -d '\r' < /tmp/env.local > /tmp/env.local.clean
+          scp -o BatchMode=yes /tmp/env.local.clean \
+            ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }}:/home/exouser/heroic-frontend/.env.local
+
+      - name: Deploy
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }} bash <<'REMOTE'
+            set -e
+            DEPLOY_PATH="/home/exouser/heroic-frontend"
+            cd "$DEPLOY_PATH"
+
+            echo "--- Pulling latest code ---"
+            git fetch origin --prune
+            git checkout development
+            git reset --hard origin/development
+
+            echo "--- Building and restarting frontend ---"
+            docker compose build
+            docker compose down
+            docker compose up -d
+
+            echo "--- Deploy complete ---"
+          REMOTE
+
+      - name: Smoke test
+        run: |
+          echo "Waiting for frontend to start..."
+          for i in $(seq 1 12); do
+            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://dev.heroic.scimma.org/ || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "301" ] || [ "$STATUS" = "302" ]; then
+              echo "Frontend is up!"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Smoke test failed after 2 minutes"
+          exit 1
