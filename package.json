@@ -15,6 +15,7 @@
     "@mdi/font": "^7.4.47",
     "@vuepic/vue-datepicker": "^11.0.2",
     "@vueuse/core": "^13.1.0",
+    "aladin-lite": "^3.8.2",
     "echarts": "^5.6.0",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
