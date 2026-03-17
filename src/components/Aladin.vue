@@ -2,7 +2,6 @@
 import { ref, watch, onMounted } from 'vue';
 import { useFiltersStore } from '@/stores/filters'
 import A from 'aladin-lite';
-import P from 'aladin-lite';
 
 const props = defineProps({
   pointings: {
@@ -107,7 +106,7 @@ function addOverlaysFromPointings() {
     // Get a set of unique colors for those pointings per instrument they are associated with
     const huesArray = uniqueHues(Object.keys(overlaysToAdd).length);
     Object.keys(overlays.value).forEach((instrument, hueIndex) => {
-      const numFootprints = overlaysToAdd[instrument].length - 1;
+      const numFootprints = overlaysToAdd[instrument].length;
         overlaysToAdd[instrument].forEach(([pointing, footprint], index) => {
           // Set the lightness to be lighter the more recent the pointing is, between 15% and 75%
           const lightness = props.dateOrder == 'desc' ? (((numFootprints - index) / numFootprints) * 60) + 15: (((index) / numFootprints) * 60) + 15
