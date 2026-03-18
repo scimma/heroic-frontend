@@ -230,7 +230,7 @@ watch(
   <div style="position: relative; height:400px;">
     <div ref="aladinDiv" style="height: 100%;">
     </div>
-    <v-range-slider v-if="props.includeDateSlider" class="slider-overlay" v-model="dateSlider" strict color="primary" thumb-label="always" thumb-color="no" @update:model-value="dateSliderChanged()">
+    <v-range-slider v-if="props.includeDateSlider" class="slider-overlay" v-model="dateSlider" strict color="secondary" thumb-label="always" thumb-color="no" track-size="1" thumb-size="12" @update:model-value="dateSliderChanged()">
       <template v-slot:thumb-label="{ modelValue }">
         {{ sliderValueToISODate(modelValue).toISOString() }}
       </template>
