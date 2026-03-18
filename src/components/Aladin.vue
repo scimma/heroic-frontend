@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useFiltersStore } from '@/stores/filters'
+import { useDebounceFn } from '@vueuse/core';
 import A from 'aladin-lite';
 
 const props = defineProps({
@@ -15,6 +16,10 @@ const props = defineProps({
   dateOrder: {
     type: String,
     default: 'desc'
+  },
+  includeDateSlider: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -24,6 +29,7 @@ const selectedIds = defineModel();
 const aladinDiv = ref(null);
 const overlays = ref({});
 const pointingToPolygon = ref({});
+const dateSlider = ref([0, 100]);
 let aladin = null;
 
 const emit = defineEmits(['refresh-table']);
@@ -64,9 +70,33 @@ onMounted(() => {
       selectedIds.value = [];
       emit('refresh-table');
     }
-    
   })
+});
 
+const getMinDate = computed(() => {
+  // Get the min date value from the pointings array
+  if (props.pointings && props.pointings.length > 0) {
+    if (props.dateOrder == 'desc') {
+      return new Date(props.pointings[props.pointings.length-1].date);
+    }
+    else {
+      return new Date(props.pointings[0].date);
+    }
+  }
+  return null;
+});
+
+const getMaxDate = computed(() => {
+  // Get the max date value from the pointings array
+  if (props.pointings && props.pointings.length > 0) {
+    if (props.dateOrder == 'desc') {
+      return new Date(props.pointings[0].date);
+    }
+    else {
+      return new Date(props.pointings[props.pointings.length-1].date);
+    }
+  }
+  return null;
 });
 
 function getPointing(id) {
@@ -138,8 +168,39 @@ function selectPointings() {
   })
 }
 
+function sliderValueToISODate(value) {
+  if (!getMinDate.value || !getMaxDate.value) {
+    //If we don't currently have a min/max value, its because the widget hasn't finished loading yet so this doesn't matter.
+    return new Date();
+  }
+  // Convert slider value in range 0 to 100 to range minDate to maxDate.
+  let date = new Date(getMinDate.value.getTime() + (getMaxDate.value - getMinDate.value) * (value / 100.0));
+  return date;
+}
+
+const dateSliderChanged = useDebounceFn(() => {
+  showPolygonByDateRange();
+}, 100, {maxWait: 1000})
+
+function showPolygonByDateRange() {
+  // Selectively shows or hides the polygon footprints based on if they are within the date range slider or not
+  let startDate = sliderValueToISODate(dateSlider.value[0]);
+  let endDate = sliderValueToISODate(dateSlider.value[1]);
+  Object.values(pointingToPolygon.value).forEach(polygon => {
+    let date = new Date(polygon.pointing.date);
+    if (date > endDate || date < startDate) {
+      polygon.hide();
+    }
+    else {
+      polygon.show();
+    }
+  });
+}
+
 watch(
   () => props.pointings, () => {
+    // Reset date slider
+    dateSlider.value = [0, 100];
     addOverlaysFromPointings();
   }
 );
@@ -169,6 +230,11 @@ watch(
   <div style="position: relative; height:400px;">
     <div ref="aladinDiv" style="height: 100%;">
     </div>
+    <v-range-slider v-if="props.includeDateSlider" class="slider-overlay" v-model="dateSlider" strict color="primary" thumb-label="always" thumb-color="no" @update:model-value="dateSliderChanged()">
+      <template v-slot:thumb-label="{ modelValue }">
+        {{ sliderValueToISODate(modelValue).toISOString() }}
+      </template>
+    </v-range-slider>
     <v-progress-circular v-if="props.loading" class="progress-overlay" indeterminate size="100" width="5" color="secondary"></v-progress-circular>
   </div>
 </template>
@@ -183,5 +249,12 @@ watch(
   left:0;
   right:0;
   z-index:999;
+}
+
+.slider-overlay {
+  position: absolute;
+  width: 80%;
+  left: 10%;
+  bottom: 2%;
 }
 </style>
