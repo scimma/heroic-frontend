@@ -11,9 +11,6 @@ const rail = ref(false)
 const searchTargetErrors = ref();
 const searchTargetSuccess = ref();
 const filtersStore = useFiltersStore()
-const minorPlanetFields = ['epoch_of_elements', 'orbital_inclination', 'longitude_of_ascending_node', 'argument_of_perihelion', 'mean_distance', 'eccentricity', 'mean_anomaly']
-const cometFields = ['epoch_of_elements', 'orbital_inclination', 'longitude_of_ascending_node', 'argument_of_perihelion', 'perihelion_distance', 'eccentricity', 'epoch_of_perihelion']
-const majorPlanetFields = ['epoch_of_elements', 'orbital_inclination', 'longitude_of_ascending_node', 'argument_of_perihelion', 'mean_distance', 'eccentricity', 'mean_anomaly', 'daily_motion']
 
 function setDateRange(offset_start, offset_end) {
   filtersStore.queryParams.base.start = new Date(Date.now() + (3600 * 1000 * 24 * offset_start)).toISOString();
@@ -96,7 +93,7 @@ const dateString = computed(() => {
 })
 
 const dateClass = computed(() => {
-  if (filtersStore.queryParams.base.start && filtersStore.queryParams.base.end) {
+  if (filtersStore.isDateComplete) {
     return 'fields-complete';
   }
   return 'fields-error';
@@ -122,25 +119,8 @@ const targetString = computed(() => {
 })
 
 const targetClass = computed(() => {
-  if (filtersStore.targetType == 'SIDEREAL'){
-    if (filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
-      return 'fields-complete';
-    }
-  }
-  else{
-    var fields = [];
-    if (filtersStore.nonSiderealType == 'MPC_MINOR_PLANET') {
-      fields = minorPlanetFields;
-    }
-    else if (filtersStore.nonSiderealType == 'MPC_COMET') {
-      fields = cometFields;
-    }
-    else if (filtersStore.nonSiderealType == 'JPL_MAJOR_PLANET'){
-      fields = majorPlanetFields;
-    }
-    if (fields.every(field => filtersStore.queryParams.nonSiderealTarget[field] != null)) {
-      return 'fields-complete';
-    }
+  if (filtersStore.isTargetComplete) {
+    return 'fields-complete';
   }
   return 'fields-error';
 })
@@ -174,7 +154,7 @@ const telescopesString = computed(() => {
 
 // Watch for changes and trigger visibility queries
 watchDebounced(() => filtersStore.$state.queryParams, () => {
-  if (dateClass.value == 'fields-complete' && targetClass.value == 'fields-complete') {
+  if (filtersStore.isDateComplete && filtersStore.isTargetComplete) {
     filtersStore.queryVisibilityAndAirmass();
   }
 }, { debounce: 500, deep: true})
@@ -241,11 +221,11 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
           </v-btn-group>
           <div class="datepicker-group mt-3">
             <v-label v-if="filtersStore.queryParams.base.start" id="start-dp-label" class="datepicker-label">Start Date</v-label> 
-            <DatePicker v-model="filtersStore.queryParams.base.start" id="start-dt-picker" model-type="iso" placeholder="Start Date" label="Start" required dark></DatePicker>
+            <DatePicker v-model="filtersStore.queryParams.base.start" model-type="iso" placeholder="Start Date" label="Start" auto-position="bottom" required dark></DatePicker>
           </div>
           <div class="datepicker-group mt-3">
             <v-label v-if="filtersStore.queryParams.base.end" id="end-dp-label" class="datepicker-label">End Date</v-label> 
-            <DatePicker v-model="filtersStore.queryParams.base.end" model-type="iso" placeholder="End Date" required dark></DatePicker>
+            <DatePicker v-model="filtersStore.queryParams.base.end" model-type="iso" placeholder="End Date" auto-position="bottom" required dark></DatePicker>
           </div>
         </v-expansion-panel-text>
       </v-expansion-panel>

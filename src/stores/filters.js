@@ -1,6 +1,10 @@
 import { defineStore } from "pinia";
 import { fetchApiCall } from '@/utils/api'
 
+const minorPlanetFields = ['epoch_of_elements', 'orbital_inclination', 'longitude_of_ascending_node', 'argument_of_perihelion', 'mean_distance', 'eccentricity', 'mean_anomaly']
+const cometFields = ['epoch_of_elements', 'orbital_inclination', 'longitude_of_ascending_node', 'argument_of_perihelion', 'perihelion_distance', 'eccentricity', 'epoch_of_perihelion']
+const majorPlanetFields = ['epoch_of_elements', 'orbital_inclination', 'longitude_of_ascending_node', 'argument_of_perihelion', 'mean_distance', 'eccentricity', 'mean_anomaly', 'daily_motion']
+
 export const useFiltersStore = defineStore("filters", {
   state() {
     return {
@@ -54,7 +58,7 @@ export const useFiltersStore = defineStore("filters", {
       loadingGWVisibility: false,
       gwVisibilityResults: null,
       gwVisibilityErrors: {},
-      gwVisibilityAbort: null
+      gwVisibilityAbort: null,
     };
   },
   getters: {
@@ -64,6 +68,41 @@ export const useFiltersStore = defineStore("filters", {
     getTelescopeForInstrument: (state) => (inst_id) => {
       let telescope_id = inst_id.split('.').slice(0, 3).join('.');
       return state.telescopes ? state.telescopes[telescope_id] || {} : {};
+    },
+    isDateComplete: (state) => {
+      if (state.queryParams.base.start && state.queryParams.base.end) {
+        return true;
+      }
+      return false;
+    },
+    isTargetComplete: (state) => {
+      if (state.isSiderealTargetComplete){
+        return true;
+      }
+      else{
+        var fields = [];
+        if (state.nonSiderealType == 'MPC_MINOR_PLANET') {
+          fields = minorPlanetFields;
+        }
+        else if (state.nonSiderealType == 'MPC_COMET') {
+          fields = cometFields;
+        }
+        else if (state.nonSiderealType == 'JPL_MAJOR_PLANET'){
+          fields = majorPlanetFields;
+        }
+        if (fields.every(field => state.queryParams.nonSiderealTarget[field] != null)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    isSiderealTargetComplete: (state) => {
+      if (state.targetType == 'SIDEREAL'){
+        if (state.queryParams.siderealTarget.ra && state.queryParams.siderealTarget.dec) {
+          return true;
+        }
+      }
+      return false;
     },
     visilibityInput(state) {
       let queryPayload = Object.fromEntries(Object.entries(state.queryParams.base).filter(([key, value]) => value == 0 || value))

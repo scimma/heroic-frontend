@@ -100,6 +100,13 @@ onMounted(async () => {
         Instruments
       </router-link>
       <router-link
+        to="/pointings"
+        class="navbar-item"
+      >
+        <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
+        Pointing
+      </router-link>
+      <router-link
         to="/planning"
         class="navbar-item"
       >
