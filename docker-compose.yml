@@ -1,9 +1,6 @@
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: heroic-frontend
+    image: ${FRONTEND_IMAGE:-heroic-frontend}
     restart: always
     networks:
       - heroic_net
