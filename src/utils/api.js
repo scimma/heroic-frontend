@@ -25,8 +25,8 @@ async function fetchApiCall({ url, method, body = null, header, signal = null, c
   if (credentials) {
     config.credentials = credentials;
   }
-  if (credentials && (method !== 'GET')) {
-    // Include CSRF token from cookie in request headers
+  if (method !== 'GET') {
+    // Include CSRF token from cookie in all non-GET requests
     let csrfToken = getCSRFTokenFromCookie();
     if (csrfToken) {
       config.headers['X-CSRFToken'] = csrfToken
