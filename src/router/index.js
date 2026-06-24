@@ -57,6 +57,11 @@ const router = createRouter({
       component: () => import("../views/PointingView.vue"),
     },
     {
+      path: "/gw-contour-map",
+      name: "gw-contour-map",
+      component: () => import("../views/GwContourMapView.vue"),
+    },
+    {
       path: "/planning",
       name: "planning",
       component: () => import("../views/PlanningView.vue"),

@@ -99,27 +99,59 @@ onMounted(async () => {
         <v-icon class="pr-2 pb-1" icon="mdi-camera" size="small"></v-icon>
         Instruments
       </router-link>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <a class="navbar-item" v-bind="props">
+            <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
+            Pointing
+            <v-icon class="pl-1 pb-1" icon="mdi-menu-down" size="small"></v-icon>
+          </a>
+        </template>
+        <v-list>
+          <v-list-item>
+            <router-link to="/pointings" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
+              Pointing
+            </router-link>
+          </v-list-item>
+          <v-list-item>
+            <router-link to="/gw-contour-map" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-map-outline" size="small"></v-icon>
+              GW Contour Map
+            </router-link>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      <v-menu v-if="userManagesObservatories">
+        <template v-slot:activator="{ props }">
+          <a class="navbar-item" v-bind="props">
+            <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
+            Planning
+            <v-icon class="pl-1 pb-1" icon="mdi-menu-down" size="small"></v-icon>
+          </a>
+        </template>
+        <v-list>
+          <v-list-item>
+            <router-link to="/planning" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
+              Planning
+            </router-link>
+          </v-list-item>
+          <v-list-item>
+            <router-link to="/planning-management" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
+              Planning Management
+            </router-link>
+          </v-list-item>
+        </v-list>
+      </v-menu>
       <router-link
-        to="/pointings"
-        class="navbar-item"
-      >
-        <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
-        Pointing
-      </router-link>
-      <router-link
+        v-else
         to="/planning"
         class="navbar-item"
       >
         <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
         Planning
-      </router-link>
-      <router-link
-        v-if="userManagesObservatories"
-        to="/planning-management"
-        class="navbar-item"
-      >
-        <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
-        Planning Management
       </router-link>
       <v-menu>
         <template v-slot:activator="{ props }">
