@@ -39,6 +39,7 @@ onMounted(() => {
   aladin = A.aladin(aladinDiv.value, {
     survey: 'P/DSS2/color', // Initial survey
     fov: 0.5, // Initial field of view in degrees
+    cooFrame: 'icrs'
   });
   if (filtersStore.isSiderealTargetComplete) {
     aladin.gotoRaDec(filtersStore.queryParams.siderealTarget.ra, filtersStore.queryParams.siderealTarget.dec);
@@ -48,7 +49,7 @@ onMounted(() => {
     aladin.setZoomFactor(1);
   }
   // Scheme for linking up selection between the aladin overlays and table of pointings
-  aladin.on('objectClicked', function(object, xyMouseCoords) {
+  aladin.on('objectClicked', function(object) {
     if (object) {
       let index = selectedIds.value.indexOf(object.pointing.id);
       if (index != -1) {

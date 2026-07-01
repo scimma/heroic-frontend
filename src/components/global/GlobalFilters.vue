@@ -498,9 +498,10 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
         </v-expansion-panel-title>
         <v-expansion-panel-text class="filter-panel">
           <v-number-input
-            class="mt-2"
+            class="mt-4"
             label="Max Airmass"
             control-variant="stacked"
+            variant="outlined"
             v-model="filtersStore.queryParams.base.max_airmass"
             :min="1"
             :max="10"
@@ -511,6 +512,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
           <v-number-input
             label="Max Lunar Phase"
             control-variant="stacked"
+            variant="outlined"
             v-model="filtersStore.queryParams.base.max_lunar_phase"
             :min="0"
             :max="1"
@@ -521,6 +523,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
           <v-number-input
             label="Min Lunar Distance"
             control-variant="stacked"
+            variant="outlined"
             v-model="filtersStore.queryParams.base.min_lunar_distance"
             :min="0"
             :max="180"

@@ -2,7 +2,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useFiltersStore } from '@/stores/filters'
 import { fetchApiCall } from '@/utils/api'
-import Aladin from '@/components/Aladin.vue'
+import PointingAladin from '@/components/PointingAladin.vue'
 import { watchDebounced } from '@vueuse/core';
 
 const filtersStore = useFiltersStore()
@@ -149,7 +149,7 @@ watchDebounced(() => filtersStore.queryParams.base.telescopes, async (newItems, 
     <v-row no-gutters v-else>
       <v-col>
         <div class="pointing-container">
-          <aladin :pointings="pointingResults" :loading="loadingPointings" v-model="selectedIds" :date-order="currentDateSort" @refreshTable="forceTableRefresh"></aladin>
+          <pointing-aladin :pointings="pointingResults" :loading="loadingPointings" v-model="selectedIds" :date-order="currentDateSort" @refreshTable="forceTableRefresh"></pointing-aladin>
           <v-data-table-server
             class="pointing-table"
             :headers="pointingHeaders"
