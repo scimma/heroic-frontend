@@ -72,7 +72,7 @@ jobs:
               "GHCR_TOKEN=${GHCR_TOKEN} GHCR_ACTOR=${GHCR_ACTOR} VERSION=${VERSION} bash -se" <<'REMOTE'
           set -e
           DEPLOY_PATH="/home/exouser/heroic-frontend"
-          export FRONTEND_IMAGE="ghcr.io/scimma/heroic-frontend:${VERSION}"
+          FRONTEND_IMAGE="ghcr.io/scimma/heroic-frontend:${VERSION}"
 
           cd "$DEPLOY_PATH"
 
