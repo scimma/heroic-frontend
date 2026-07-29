@@ -61,9 +61,4 @@ onMounted(async () => {
   font-size: 0.70rem;
   padding: 4px 8px;
   }
-
-  .acknowledgements a {
-  margin: 0 2px;
-  color: rgb(var(--v-theme-primary));
-  }
  </style>

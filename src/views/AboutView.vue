@@ -26,7 +26,9 @@
               <v-col cols="12" sm="9">
                 <p class="text-body-1">
                   This project is supported by National Science Foundation grants
-                  AST-2432428 and OAC-2311355. Any opinions, findings, conclusions or
+                  <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2432428" target="_blank"
+                  rel="noopener noreferrer">AST-2432428</a> and <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2311355"
+                  target="_blank" rel="noopener noreferrer" >OAC-2311355</a>. Any opinions, findings, conclusions or
                   recommendations expressed in this material are those of the developers
                   and do not necessarily reflect the views of the National Science
                   Foundation.
