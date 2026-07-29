@@ -40,9 +40,30 @@ onMounted(async () => {
     <v-main>
       <router-view />
     </v-main>
+    <v-footer class="acknowledgements">
+      This project is supported by National Science Foundation grants
+        <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2432428"
+        target="_blank"
+        rel="noopener noreferrer">AST-2432428</a>
+      and
+        <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2311355"
+        target="_blank"
+        rel="noopener noreferrer"
+      >OAC-2311355</a>.
+    </v-footer>
   </v-app>
 </template>
 
-<style scoped>
+ <style scoped>
+  .acknowledgements {
+  justify-content: right;
+  text-align: right;
+  font-size: 0.70rem;
+  padding: 4px 8px;
+  }
 
-</style>
+  .acknowledgements a {
+  margin: 0 2px;
+  color: rgb(var(--v-theme-primary));
+  }
+ </style>
