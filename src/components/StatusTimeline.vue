@@ -191,7 +191,7 @@ async function loadHistoricalAPIItems () {
   if (props.instrument) {
     url += '&instrument=' + props.instrument;
   }
-  await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+  await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (data) => {
     historicalItems.value = data.results;
   }})
 }
@@ -207,7 +207,7 @@ async function loadPlannedAPIItems () {
     if (props.instrument) {
       url += '&instrument=' + props.instrument;
     }
-    await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+    await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (data) => {
       plannedItems.value = data.results;
     }})
   }
@@ -215,7 +215,7 @@ async function loadPlannedAPIItems () {
 
 async function loadTelescopeDarkIntervals () {
   const url = import.meta.env.VITE_HEROIC_URL + 'api/telescopes/' + props.telescope + '/dark_intervals/?start=' + startMinusOne.value + '&end=' + endPlusOne.value;
-  await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+  await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (data) => {
     telescopeDarkIntervals.value = data;
   }})
 }

@@ -150,7 +150,7 @@ export const useFiltersStore = defineStore("filters", {
       this.airmassResults = null;  // Also clear the airmass results since querying visibility then queries airmass after
       this.visibilityErrors = {};
       const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/intervals';
-      fetchApiCall({url: url, method: 'POST', body:queryPayload, signal:this.visibilityAbort.signal, successCallback: (data) => {
+      fetchApiCall({url: url, method: 'POST', credentials: 'include', body:queryPayload, signal:this.visibilityAbort.signal, successCallback: (data) => {
         this.visibilityResults = data;
         this.loadingVisibility = false;
         this.visibilityAbort = null;
@@ -185,7 +185,7 @@ export const useFiltersStore = defineStore("filters", {
         this.loadingAirmass = true;
         this.airmassErrors = {};
         const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/airmass';
-        fetchApiCall({url: url, method: 'POST', body:queryPayload, signal:this.airmassAbort.signal, successCallback: (data) => {
+        fetchApiCall({url: url, method: 'POST', credentials: 'include', body:queryPayload, signal:this.airmassAbort.signal, successCallback: (data) => {
           this.airmassResults = data;
           this.loadingAirmass = false;
           this.airmassAbort = null;
@@ -236,7 +236,8 @@ export const useFiltersStore = defineStore("filters", {
       const url = import.meta.env.VITE_HEROIC_URL + 'api/visibility/gw';
       fetchApiCall({
         url: url, 
-        method: 'POST', 
+        method: 'POST',
+        credentials: 'include',
         body: queryPayload, 
         signal: this.gwVisibilityAbort.signal,
         successCallback: (data) => {

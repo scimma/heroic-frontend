@@ -38,7 +38,7 @@ async function fetchSkymap() {
       url += `&telescopes=${telescope}`;
     })
   }
-  await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+  await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (data) => {
     skymapByTelescope.value = data;
     loadingSkymap.value = false;
   }, failCallback: (error, status) => {
