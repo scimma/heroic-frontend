@@ -66,7 +66,7 @@ async function loadPointings({page, itemsPerPage, sortBy}) {
   else {
     currentDateSort.value = 'desc';
   }
-  await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+  await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (data) => {
     totalPointings.value = data.count;
     pointingResults.value = data.results;
     loadingPointings.value = false;
