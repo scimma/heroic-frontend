@@ -192,6 +192,13 @@ onMounted(async () => {
           <v-list-item v-if="!userStore.loggedIn">
             <v-btn @click="login">Login</v-btn>
           </v-list-item>
+          <v-divider class="my-1"></v-divider>
+          <v-list-item>
+            <router-link to="/about" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-certificate-outline" size="small"></v-icon>
+              Acknowledgements
+            </router-link>
+          </v-list-item>
         </v-list>
       </v-menu>
     </template>

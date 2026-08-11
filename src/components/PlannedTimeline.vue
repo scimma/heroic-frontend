@@ -175,7 +175,7 @@ async function loadAPIItems () {
       url += '&observatory=' + observatory;
     })
   }
-  await fetchApiCall({url: url, method: 'GET', successCallback: (data) => {
+  await fetchApiCall({url: url, method: 'GET', credentials: 'include', successCallback: (data) => {
     apiItems.value = data.results;
   }})
 }
