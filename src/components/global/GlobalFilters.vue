@@ -558,7 +558,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
           </v-row>        
         </v-expansion-panel-title>
         <v-expansion-panel-text class="filter-panel">
-          <telescope-select class="mt-6" v-model="filtersStore.queryParams.base.telescopes" :include-tooltip="true"></telescope-select>
+          <telescope-select class="mt-6" v-model="filtersStore.queryParams.base.telescopes" :include-tooltip="true" placeholder="All Telescopes" persistent-placeholder></telescope-select>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
