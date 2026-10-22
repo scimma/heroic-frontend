@@ -156,6 +156,15 @@ async function queryArchive() {
   }})
 }
 
+function downloadResults() {
+  const blob = new Blob([JSON.stringify(archiveSearches.value, null, 2)], {type: 'application/json'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'archive_results.json';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 // Drop selected instruments that can no longer be searched once the telescope filter or instrument type changes
 watch([() => filtersStore.queryParams.base.telescopes, mode], () => {
   if (instruments.value) {
@@ -239,8 +248,14 @@ watch([() => filtersStore.queryParams.base.telescopes, mode], () => {
           </v-card-text>
         </v-card>
       </v-menu>
+      <v-btn
+        class="ml-auto mr-2"
+        variant="outlined"
+        icon="mdi-download"
+        v-tooltip:top="'Download API Results'"
+        @click="downloadResults"
+      ></v-btn>
       <v-text-field
-        class="ml-auto"
         style="max-width: 300px;"
         label="Filter results"
         prepend-inner-icon="mdi-magnify"
