@@ -61,15 +61,15 @@ const showGWVisibility = computed(() => {
 // Query GW visibility when appropriate
 watch([() => filtersStore.queryParams.base.start, () => filtersStore.queryParams.base.end, 
        () => filtersStore.queryParams.siderealTarget.ra, () => filtersStore.queryParams.siderealTarget.dec,
-       () => filtersStore.queryParams.base.telescopes], () => {
-  if (showGWVisibility.value && filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
+       () => filtersStore.targetType, () => filtersStore.queryParams.base.telescopes], () => {
+  if (showGWVisibility.value && filtersStore.isSiderealTargetComplete) {
     filtersStore.queryGWVisibility();
   }
 }, { deep: true, immediate: true });
 
 // Also query on mount if conditions are met
 onMounted(() => {
-  if (showGWVisibility.value && filtersStore.queryParams.siderealTarget.ra && filtersStore.queryParams.siderealTarget.dec) {
+  if (showGWVisibility.value && filtersStore.isSiderealTargetComplete) {
     filtersStore.queryGWVisibility();
   }
 });
@@ -208,7 +208,7 @@ watch(() => filtersStore.$state.airmassErrors, () => {
             Gravitational Wave Network Visibility
           </v-card-title>
           <v-card-text>
-            <div v-if="!filtersStore.queryParams.siderealTarget.ra || !filtersStore.queryParams.siderealTarget.dec" class="text-center py-8">
+            <div v-if="!filtersStore.isSiderealTargetComplete" class="text-center py-8">
               <v-icon size="64" color="grey">mdi-target</v-icon>
               <h3 class="mt-4">Target Coordinates Required</h3>
               <p class="text-grey mt-2">Please enter RA and Dec coordinates to see GW network visibility</p>

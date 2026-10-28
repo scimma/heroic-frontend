@@ -98,7 +98,7 @@ export const useFiltersStore = defineStore("filters", {
     },
     isSiderealTargetComplete: (state) => {
       if (state.targetType == 'SIDEREAL'){
-        if (state.queryParams.siderealTarget.ra && state.queryParams.siderealTarget.dec) {
+        if (state.queryParams.siderealTarget.ra != null && state.queryParams.siderealTarget.dec != null) {
           return true;
         }
       }
@@ -138,7 +138,7 @@ export const useFiltersStore = defineStore("filters", {
       let queryPayload = this.visilibityInput;
       
       // Check if we have the required target coordinates
-      if (this.targetType === 'SIDEREAL' && (!queryPayload.ra || !queryPayload.dec)) {
+      if (this.targetType === 'SIDEREAL' && !this.isSiderealTargetComplete) {
         this.loadingVisibility = false;
         this.visibilityErrors = {'Error': 'Target coordinates (RA/Dec) are required'};
         return;
@@ -205,7 +205,7 @@ export const useFiltersStore = defineStore("filters", {
       this.gwVisibilityAbort = new AbortController();
       
       // Check if we have required coordinates
-      if (!this.queryParams.siderealTarget.ra || !this.queryParams.siderealTarget.dec) {
+      if (!this.isSiderealTargetComplete) {
         this.gwVisibilityErrors = {'Error': 'RA and Dec coordinates are required for GW visibility'};
         return;
       }

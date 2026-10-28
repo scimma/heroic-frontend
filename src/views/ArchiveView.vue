@@ -220,10 +220,10 @@ watch([() => filtersStore.queryParams.base.telescopes, mode], () => {
       <span class="text-medium-emphasis">{{ archiveFrames.length }} frames from {{ archiveSearches.length }} archive searches.</span>
       <v-menu v-if="failedSearches.length" location="bottom start" :close-on-content-click="false" persistent no-click-animation>
         <template v-slot:activator="{ props }">
-          <a class="ml-3 text-warning cursor-pointer" v-bind="props">
+          <button type="button" class="ml-3 text-warning" v-bind="props">
             <v-icon class="pb-1" icon="mdi-alert" size="small"></v-icon>
             {{ failedSearches.length }} Archive {{ failedSearches.length == 1 ? 'search' : 'searches' }} failed
-          </a>
+          </button>
         </template>
         <v-card title="Failed archive searches" density="compact" max-width="700" border="warning md opacity-100">
           <v-card-text>
@@ -235,10 +235,10 @@ watch([() => filtersStore.queryParams.base.telescopes, mode], () => {
       </v-menu>
       <v-menu v-if="truncatedSearches.length" location="bottom start" :close-on-content-click="false" persistent no-click-animation>
         <template v-slot:activator="{ props }">
-          <a class="ml-3 text-info cursor-pointer" v-bind="props">
+          <button type="button" class="ml-3 text-info" v-bind="props">
             <v-icon class="pb-1" icon="mdi-information" size="small"></v-icon>
             {{ truncatedSearches.length }} Archive {{ truncatedSearches.length == 1 ? 'search' : 'searches' }} reached the row limit
-          </a>
+          </button>
         </template>
         <v-card title="Archive searches with more frames than the row limit" density="compact" max-width="700" border="info md opacity-100">
           <v-card-text>

@@ -22,8 +22,8 @@ function jdToMjd(jd) {
 }
 
 function fillInTarget(targetData) {
-  filtersStore.queryParams.siderealTarget.ra = targetData.ra_d || targetData.ra || null
-  filtersStore.queryParams.siderealTarget.dec = targetData.dec_c || targetData.dec || null
+  filtersStore.queryParams.siderealTarget.ra = targetData.ra_d ?? targetData.ra ?? null
+  filtersStore.queryParams.siderealTarget.dec = targetData.dec_c ?? targetData.dec ?? null
   filtersStore.queryParams.siderealTarget.proper_motion_ra = targetData.pmra || null
   filtersStore.queryParams.siderealTarget.proper_motion_dec = targetData.pmdec || null
   filtersStore.queryParams.siderealTarget.parallax = targetData.plx_value || null
