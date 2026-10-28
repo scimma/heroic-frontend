@@ -60,5 +60,6 @@ onMounted(async () => {
   text-align: right;
   font-size: 0.70rem;
   padding: 4px 8px;
+  height: var(--acknowledgements-height);
   }
  </style>

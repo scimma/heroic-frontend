@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "@/views/HomeView.vue";
 import TelescopeDetailsView from "@/views/TelescopeDetailsView.vue";
 import InstrumentDetailsView from "@/views/InstrumentDetailsView.vue";
-import PointingView from "@/views/PointingView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,6 +52,11 @@ const router = createRouter({
       path: "/pointings",
       name: "pointings",
       component: () => import("../views/PointingView.vue"),
+    },
+    {
+      path: "/archive",
+      name: "archive",
+      component: () => import("../views/ArchiveView.vue"),
     },
     {
       path: "/gw-contour-map",

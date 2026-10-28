@@ -22,8 +22,8 @@ function jdToMjd(jd) {
 }
 
 function fillInTarget(targetData) {
-  filtersStore.queryParams.siderealTarget.ra = targetData.ra_d || targetData.ra || null
-  filtersStore.queryParams.siderealTarget.dec = targetData.dec_c || targetData.dec || null
+  filtersStore.queryParams.siderealTarget.ra = targetData.ra_d ?? targetData.ra ?? null
+  filtersStore.queryParams.siderealTarget.dec = targetData.dec_c ?? targetData.dec ?? null
   filtersStore.queryParams.siderealTarget.proper_motion_ra = targetData.pmra || null
   filtersStore.queryParams.siderealTarget.proper_motion_dec = targetData.pmdec || null
   filtersStore.queryParams.siderealTarget.parallax = targetData.plx_value || null
@@ -558,7 +558,7 @@ watchDebounced(() => filtersStore.$state.queryParams, () => {
           </v-row>        
         </v-expansion-panel-title>
         <v-expansion-panel-text class="filter-panel">
-          <telescope-select class="mt-6" v-model="filtersStore.queryParams.base.telescopes" :include-tooltip="true"></telescope-select>
+          <telescope-select class="mt-6" v-model="filtersStore.queryParams.base.telescopes" :include-tooltip="true" placeholder="All Telescopes" persistent-placeholder></telescope-select>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
