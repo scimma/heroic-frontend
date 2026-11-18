@@ -1,3 +1,7 @@
+:root {
+  --acknowledgements-height: 32px;
+}
+
 a,
 .green {
   text-decoration: none;

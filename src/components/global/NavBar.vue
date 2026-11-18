@@ -1,9 +1,10 @@
 <script setup>
 import { onMounted, ref, computed} from 'vue';
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user';
 import { fetchApiCall } from '@/utils/api'
 
+const route = useRoute()
 const userStore = useUserStore()
 const revokeTokenDialog = ref(false);
 
@@ -71,41 +72,59 @@ onMounted(async () => {
       IC
     </v-app-bar-title>
     <template v-slot:append>
-      <router-link
-        to="/"
-        class="navbar-item"
-      >
-        <v-icon class="pr-2 pb-1" icon="mdi-home" size="small"></v-icon>
-        Home
-      </router-link>
-      <router-link
-        to="/visibility"
-        class="navbar-item"
-      >
-        <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
-        Target Visibility
-      </router-link>
-      <router-link
-        to="/telescopes"
-        class="navbar-item"
-      >
-        <v-icon class="pr-2 pb-1" icon="mdi-telescope" size="small"></v-icon>
-        Telescopes
-      </router-link>
-      <router-link
-        to="/instruments"
-        class="navbar-item"
-      >
-        <v-icon class="pr-2 pb-1" icon="mdi-camera" size="small"></v-icon>
-        Instruments
-      </router-link>
       <v-menu>
         <template v-slot:activator="{ props }">
-          <a class="navbar-item" v-bind="props">
+          <button type="button" class="navbar-item" :class="{ 'navbar-group-active': ['home', 'visibility'].includes(route.name) }" v-bind="props">
+            <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
+            Visibility
+            <v-icon class="pl-1 pb-1" icon="mdi-menu-down" size="small"></v-icon>
+          </button>
+        </template>
+        <v-list>
+          <v-list-item>
+            <router-link to="/" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-map" size="small"></v-icon>
+              Site Map
+            </router-link>
+          </v-list-item>
+          <v-list-item>
+            <router-link to="/visibility" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
+              Target Visibility Plot
+            </router-link>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <button type="button" class="navbar-item" :class="{ 'navbar-group-active': ['telescopes', 'telescopeDetail', 'instruments', 'instrumentDetail'].includes(route.name) }" v-bind="props">
+            <v-icon class="pr-2 pb-1" icon="mdi-table" size="small"></v-icon>
+            Data Tables
+            <v-icon class="pl-1 pb-1" icon="mdi-menu-down" size="small"></v-icon>
+          </button>
+        </template>
+        <v-list>
+          <v-list-item>
+            <router-link to="/telescopes" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-telescope" size="small"></v-icon>
+              Telescopes
+            </router-link>
+          </v-list-item>
+          <v-list-item>
+            <router-link to="/instruments" class="navbar-item">
+              <v-icon class="pr-2 pb-1" icon="mdi-camera" size="small"></v-icon>
+              Instruments
+            </router-link>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <button type="button" class="navbar-item" :class="{ 'navbar-group-active': ['pointings', 'gw-contour-map'].includes(route.name) }" v-bind="props">
             <v-icon class="pr-2 pb-1" icon="mdi-eye-outline" size="small"></v-icon>
             Pointing
             <v-icon class="pl-1 pb-1" icon="mdi-menu-down" size="small"></v-icon>
-          </a>
+          </button>
         </template>
         <v-list>
           <v-list-item>
@@ -122,13 +141,20 @@ onMounted(async () => {
           </v-list-item>
         </v-list>
       </v-menu>
+      <router-link
+        to="/archive"
+        class="navbar-item"
+      >
+        <v-icon class="pr-2 pb-1" icon="mdi-archive-search-outline" size="small"></v-icon>
+        Archive
+      </router-link>
       <v-menu v-if="userManagesObservatories">
         <template v-slot:activator="{ props }">
-          <a class="navbar-item" v-bind="props">
+          <button type="button" class="navbar-item" :class="{ 'navbar-group-active': ['planning', 'planning-management'].includes(route.name) }" v-bind="props">
             <v-icon class="pr-2 pb-1" icon="mdi-calendar" size="small"></v-icon>
             Planning
             <v-icon class="pl-1 pb-1" icon="mdi-menu-down" size="small"></v-icon>
-          </a>
+          </button>
         </template>
         <v-list>
           <v-list-item>
@@ -218,8 +244,21 @@ onMounted(async () => {
   text-align:center;
 }
 
-.router-link-active {
-  background-color: hsla(160, 100%, 37%, 0.1);;
+/* Match the global link styling for the menu activator buttons */
+button.navbar-item {
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  button.navbar-item:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+.router-link-active, .navbar-group-active {
+  background-color: hsla(160, 100%, 37%, 0.2);;
 }
 
 </style>

@@ -191,7 +191,8 @@ watchDebounced(() => filtersStore.queryParams.base.telescopes, async (newItems, 
 .pointing-container {
   display: flex;
   flex-direction: column;
-  height: 87vh;
+  /* 32px is the top and bottom padding of the surrounding v-container */
+  height: calc(100dvh - var(--v-layout-top) - var(--acknowledgements-height) - 32px);
 }
 
 .pointing-table {

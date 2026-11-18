@@ -1,10 +1,9 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { computed, nextTick } from 'vue'
 import { useFiltersStore } from '@/stores/filters'
 
 const model = defineModel()
 const filtersStore = useFiltersStore()
-const selectAllBtnStates = ref({})
 
 const props = defineProps({
   observatoryFilter: {
@@ -75,7 +74,7 @@ const telescopeOptions = computed(() => {
   return telescopeItems;
 })
 
-const indeterminateStates = computed(() => {
+const selectAllStates = computed(() => {
   let states = {};
   const telescopes = telescopesByObservatory.value;
   for (const observatory of Object.keys(telescopes)) {
@@ -89,12 +88,10 @@ const indeterminateStates = computed(() => {
         }
       }
     }
-    if (numSelected > 0 && totalNum != numSelected) {
-      states[observatory] = true;
-    }
-    else {
-      states[observatory] = false;
-    }
+    states[observatory] = {
+      selected: numSelected > 0 && totalNum == numSelected,
+      indeterminate: numSelected > 0 && totalNum != numSelected
+    };
   }
   return states;
 })
@@ -133,7 +130,7 @@ async function selectAllObservatory(selected, observatory) {
     item-value="id"
     item-title="telescope"
     label="Telescopes"
-    v-tooltip:top="tooltip"
+    v-tooltip:top="{ text: tooltip || '', disabled: !tooltip }"
     :chips="props.multiple"
     closable-chips
     :multiple="props.multiple"
@@ -149,7 +146,7 @@ async function selectAllObservatory(selected, observatory) {
             <p class="pl-8">Select All: </p>
           </v-col>
           <v-col v-if="props.multiple">
-            <v-checkbox-btn v-model="selectAllBtnStates[data.props.observatory]" class="pl-4" density="compact" :indeterminate="indeterminateStates[data.props.observatory]" @update:modelValue="selectAllObservatory($event, data.props.observatory)"></v-checkbox-btn>
+            <v-checkbox-btn :model-value="selectAllStates[data.props.observatory].selected" class="pl-4" density="compact" :indeterminate="selectAllStates[data.props.observatory].indeterminate" @update:modelValue="selectAllObservatory($event, data.props.observatory)"></v-checkbox-btn>
           </v-col>
         </v-row>
       </v-list-subheader>

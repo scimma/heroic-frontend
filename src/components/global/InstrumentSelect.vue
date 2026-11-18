@@ -1,14 +1,17 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { computed, nextTick } from 'vue'
 import { useFiltersStore } from '@/stores/filters'
 
 const model = defineModel()
 const filtersStore = useFiltersStore()
-const selectAllBtnStates = ref({})
 
 const props = defineProps({
   observatoryFilter: {
     type: Array,
+    required: false
+  },
+  instrumentFilter: {
+    type: Function,
     required: false
   },
   multiple: {
@@ -33,6 +36,10 @@ const instrumentsByObservatory = computed(() => {
     let instruments = {};
     Object.values(filtersStore.telescopes).forEach(telescope => {
       if (!props.observatoryFilter || props.observatoryFilter.includes(telescope.observatory)) {
+        const telescopeInstruments = props.instrumentFilter ? telescope.instruments.filter(instrument => props.instrumentFilter(instrument, telescope)) : telescope.instruments;
+        if (telescopeInstruments.length == 0) {
+          return;
+        }
         let observatory = telescope.observatory + ': ' + telescope.observatory_name;
         let site = telescope.id.split('.')[1] + ': ' + telescope.site_name;
         if (!(observatory in instruments)){
@@ -41,7 +48,7 @@ const instrumentsByObservatory = computed(() => {
         if (!(site in instruments[observatory])) {
           instruments[observatory][site] = {};
         }
-        telescope.instruments.forEach(instrument => {
+        telescopeInstruments.forEach(instrument => {
           let tel_id = telescope.id.split('.')[2] + ': ' + telescope.name;
           if (!(tel_id in instruments[observatory][site])) {
             instruments[observatory][site][tel_id] = []
@@ -87,14 +94,14 @@ const instrumentOptions = computed(() => {
   return instrumentItems;
 })
 
-const indeterminateStates = computed(() => {
+const selectAllStates = computed(() => {
   let states = {};
   const instruments = instrumentsByObservatory.value;
   for (const observatory of Object.keys(instruments)) {
     let numSelected = 0;
     let totalNum = 0;
     for (const site of Object.values(instruments[observatory])) {
-      for (const telescope of Object.values(instruments[observatory][site])) {
+      for (const telescope of Object.values(site)) {
         for (const instrument of telescope) {
           totalNum += 1;
           if (model.value && model.value.includes(instrument.id)) {
@@ -103,12 +110,10 @@ const indeterminateStates = computed(() => {
         }
       }
     }
-    if (numSelected > 0 && totalNum != numSelected) {
-      states[observatory] = true;
-    }
-    else {
-      states[observatory] = false;
-    }
+    states[observatory] = {
+      selected: numSelected > 0 && totalNum == numSelected,
+      indeterminate: numSelected > 0 && totalNum != numSelected
+    };
   }
   return states;
 })
@@ -121,7 +126,7 @@ async function selectAllObservatory(selected, observatory) {
       await nextTick();
     }
     for (const site of Object.values(instruments[observatory])) {
-      for (const telescope of Object.values(instruments[observatory][site])) {
+      for (const telescope of Object.values(site)) {
         for (const instrument of telescope) {
           let index = model.value.indexOf(instrument.id);
           if (selected && index == -1) {
@@ -149,7 +154,7 @@ async function selectAllObservatory(selected, observatory) {
     item-value="id"
     item-title="instrument"
     label="Instruments"
-    v-tooltip:top="tooltip"
+    v-tooltip:top="{ text: tooltip || '', disabled: !tooltip }"
     :chips="props.multiple"
     closable-chips
     :multiple="props.multiple"
@@ -165,7 +170,7 @@ async function selectAllObservatory(selected, observatory) {
             <p class="pl-8">Select All: </p>
           </v-col>
           <v-col v-if="props.multiple">
-            <v-checkbox-btn v-model="selectAllBtnStates[data.props.observatory]" class="pl-4" density="compact" :indeterminate="indeterminateStates[data.props.observatory]" @update:modelValue="selectAllObservatory($event, data.props.observatory)"></v-checkbox-btn>
+            <v-checkbox-btn :model-value="selectAllStates[data.props.observatory].selected" class="pl-4" density="compact" :indeterminate="selectAllStates[data.props.observatory].indeterminate" @update:modelValue="selectAllObservatory($event, data.props.observatory)"></v-checkbox-btn>
           </v-col>
         </v-row>
       </v-list-subheader>
